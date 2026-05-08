@@ -1,11 +1,12 @@
 package com.perplexinggames.ironsoul;
 
 import com.badlogic.gdx.Game;
+import com.perplexinggames.ironsoul.screens.ControlDemoScreen;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends Game {
     @Override
     public void create() {
-        setScreen(new FirstScreen());
+        setScreen(new ControlDemoScreen());
     }
 }

@@ -9,15 +9,19 @@ import java.util.Map;
 
 public class LibGdxInputAdapter implements DeviceInputAdapter<KeyboardControl> {
     private final Map<KeyboardControl, Integer> keyCodes = new EnumMap<>(KeyboardControl.class);
+    private final Map<KeyboardControl, Integer> mouseButtons = new EnumMap<>(KeyboardControl.class);
     private EnumSet<KeyboardControl> previousHeld = EnumSet.noneOf(KeyboardControl.class);
 
     public LibGdxInputAdapter() {
         keyCodes.put(KeyboardControl.A, Input.Keys.A);
         keyCodes.put(KeyboardControl.D, Input.Keys.D);
+        keyCodes.put(KeyboardControl.LEFT, Input.Keys.LEFT);
+        keyCodes.put(KeyboardControl.RIGHT, Input.Keys.RIGHT);
         keyCodes.put(KeyboardControl.W, Input.Keys.W);
         keyCodes.put(KeyboardControl.S, Input.Keys.S);
         keyCodes.put(KeyboardControl.SPACE, Input.Keys.SPACE);
         keyCodes.put(KeyboardControl.SHIFT_LEFT, Input.Keys.SHIFT_LEFT);
+        keyCodes.put(KeyboardControl.SHIFT_RIGHT, Input.Keys.SHIFT_RIGHT);
         keyCodes.put(KeyboardControl.CONTROL_LEFT, Input.Keys.CONTROL_LEFT);
         keyCodes.put(KeyboardControl.Q, Input.Keys.Q);
         keyCodes.put(KeyboardControl.E, Input.Keys.E);
@@ -29,6 +33,7 @@ public class LibGdxInputAdapter implements DeviceInputAdapter<KeyboardControl> {
         keyCodes.put(KeyboardControl.M, Input.Keys.M);
         keyCodes.put(KeyboardControl.ESCAPE, Input.Keys.ESCAPE);
         keyCodes.put(KeyboardControl.ENTER, Input.Keys.ENTER);
+        mouseButtons.put(KeyboardControl.MOUSE_LEFT, Input.Buttons.LEFT);
     }
 
     @Override
@@ -36,6 +41,11 @@ public class LibGdxInputAdapter implements DeviceInputAdapter<KeyboardControl> {
         EnumSet<KeyboardControl> currentHeld = EnumSet.noneOf(KeyboardControl.class);
         for (Map.Entry<KeyboardControl, Integer> entry : keyCodes.entrySet()) {
             if (Gdx.input.isKeyPressed(entry.getValue())) {
+                currentHeld.add(entry.getKey());
+            }
+        }
+        for (Map.Entry<KeyboardControl, Integer> entry : mouseButtons.entrySet()) {
+            if (Gdx.input.isButtonPressed(entry.getValue())) {
                 currentHeld.add(entry.getKey());
             }
         }

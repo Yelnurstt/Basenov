@@ -1,5 +1,8 @@
 package com.perplexinggames.ironsoul.core.gameplay;
 
+import com.perplexinggames.ironsoul.core.gamestate.GameStateManager;
+import com.perplexinggames.ironsoul.core.gamestate.GameStateType;
+
 public class OverlayController {
     private boolean mapOpen;
     private boolean inventoryOpen;
@@ -19,6 +22,22 @@ public class OverlayController {
             mapOpen = false;
         }
         lastOverlayAction = inventoryOpen ? "Inventory opened" : "Inventory closed";
+    }
+
+    public void toggleMap(GameStateManager gameStateManager) {
+        toggleMap();
+        gameStateManager.toggleState(
+            GameStateType.MAP_OPEN,
+            GameStateType.PLAYING
+        );
+    }
+
+    public void toggleInventory(GameStateManager gameStateManager) {
+        toggleInventory();
+        gameStateManager.toggleState(
+            GameStateType.INVENTORY_OPEN,
+            GameStateType.PLAYING
+        );
     }
 
     public boolean isMapOpen() {

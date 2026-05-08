@@ -8,6 +8,7 @@ import java.util.List;
 public class InteractionSystem {
     private final DialogueSystem dialogueSystem;
     private final GameStateManager gameStateManager;
+    private boolean dialogueEnabled = true;
     private int interactionCount;
     private String lastInteraction = "Idle";
 
@@ -20,7 +21,7 @@ public class InteractionSystem {
         interactionCount++;
         lastInteraction = "Maintenance terminal engaged";
 
-        if (!dialogueSystem.isActive()) {
+        if (dialogueEnabled && !dialogueSystem.isActive()) {
             dialogueSystem.startConversation(List.of(
                 "Pilot, hull mass confirmed. Expect delayed braking.",
                 "Servo pressure is stable. Dash window recalibrated.",
@@ -28,6 +29,10 @@ public class InteractionSystem {
             ));
             gameStateManager.changeState(GameStateType.DIALOGUE);
         }
+    }
+
+    public void setDialogueEnabled(boolean dialogueEnabled) {
+        this.dialogueEnabled = dialogueEnabled;
     }
 
     public int getInteractionCount() {

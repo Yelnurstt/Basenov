@@ -64,10 +64,16 @@ public final class DefaultCommandMapFactory {
             .register(InputAction.INTERACT, new ActionCommandBinding()
                 .on(InputPhase.START, context -> new InteractCommand(context.getInteractionSystem())))
             .register(InputAction.MAP, new ActionCommandBinding()
-                .on(InputPhase.START, context -> new ToggleMapCommand(context.getOverlayController())))
+                .on(InputPhase.START, context -> new ToggleMapCommand(
+                    context.getOverlayController(),
+                    context.getGameStateManager()
+                )))
             .register(InputAction.PAUSE, new ActionCommandBinding()
                 .on(InputPhase.START, context -> new TogglePauseCommand(context.getGameStateManager())))
             .register(InputAction.INVENTORY, new ActionCommandBinding()
-                .on(InputPhase.START, context -> new ToggleInventoryCommand(context.getOverlayController())));
+                .on(InputPhase.START, context -> new ToggleInventoryCommand(
+                    context.getOverlayController(),
+                    context.getGameStateManager()
+                )));
     }
 }

@@ -3,7 +3,9 @@ package com.perplexinggames.ironsoul.core.gamestate;
 public enum GameStateType {
     MAIN_MENU,
     PLAYING,
-    PAUSE,
+    PAUSED,
+    MAP_OPEN,
+    INVENTORY_OPEN,
     DIALOGUE,
     CUTSCENE
 }

@@ -224,6 +224,10 @@ public class TankController {
         return lastAction;
     }
 
+    public FacingDirection getFacingDirection() {
+        return model.getFacingDirection();
+    }
+
     private void registerStates() {
         states.put(TankControlStateId.GROUNDED, new GroundedState());
         states.put(TankControlStateId.AIRBORNE, new AirborneState());

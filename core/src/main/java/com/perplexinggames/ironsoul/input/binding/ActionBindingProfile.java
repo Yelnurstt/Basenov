@@ -3,6 +3,7 @@ package com.perplexinggames.ironsoul.input.binding;
 import com.perplexinggames.ironsoul.input.adapter.ControlInputFrame;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -35,7 +36,15 @@ public class ActionBindingProfile<C extends Enum<C>> {
     }
 
     public Set<C> getBindings(InputAction action) {
-        return bindings.getOrDefault(action, EnumSet.noneOf(controlType));
+        return Collections.unmodifiableSet(bindings.getOrDefault(action, EnumSet.noneOf(controlType)));
+    }
+
+    public Map<InputAction, Set<C>> snapshotBindings() {
+        EnumMap<InputAction, Set<C>> snapshot = new EnumMap<>(InputAction.class);
+        for (Map.Entry<InputAction, EnumSet<C>> entry : bindings.entrySet()) {
+            snapshot.put(entry.getKey(), Collections.unmodifiableSet(EnumSet.copyOf(entry.getValue())));
+        }
+        return Collections.unmodifiableMap(snapshot);
     }
 
     public List<InputActionEvent> resolve(ControlInputFrame<C> frame) {

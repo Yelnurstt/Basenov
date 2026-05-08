@@ -4,8 +4,8 @@ import com.perplexinggames.ironsoul.core.gamestate.AbstractGameState;
 import com.perplexinggames.ironsoul.core.gamestate.GameStateType;
 import com.perplexinggames.ironsoul.input.state.InputMode;
 
-public class PauseState extends AbstractGameState {
-    public PauseState(InputMode inputMode) {
-        super(GameStateType.PAUSED, "Paused", inputMode, false);
+public class InventoryOpenState extends AbstractGameState {
+    public InventoryOpenState(InputMode inputMode) {
+        super(GameStateType.INVENTORY_OPEN, "Inventory Open", inputMode, false);
     }
 }

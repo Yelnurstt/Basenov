@@ -17,7 +17,9 @@ import com.perplexinggames.ironsoul.core.gamestate.GameStateManager;
 import com.perplexinggames.ironsoul.core.gamestate.GameStateType;
 import com.perplexinggames.ironsoul.core.gamestate.states.CutsceneState;
 import com.perplexinggames.ironsoul.core.gamestate.states.DialogueState;
+import com.perplexinggames.ironsoul.core.gamestate.states.InventoryOpenState;
 import com.perplexinggames.ironsoul.core.gamestate.states.MainMenuState;
+import com.perplexinggames.ironsoul.core.gamestate.states.MapOpenState;
 import com.perplexinggames.ironsoul.core.gamestate.states.PauseState;
 import com.perplexinggames.ironsoul.core.gamestate.states.PlayingState;
 import com.perplexinggames.ironsoul.input.adapter.KeyboardControl;
@@ -31,6 +33,7 @@ import com.perplexinggames.ironsoul.input.mapper.ContextualInputMapper;
 import com.perplexinggames.ironsoul.input.state.CutsceneInputMode;
 import com.perplexinggames.ironsoul.input.state.DialogueInputMode;
 import com.perplexinggames.ironsoul.input.state.MainMenuInputMode;
+import com.perplexinggames.ironsoul.input.state.OverlayInputMode;
 import com.perplexinggames.ironsoul.input.state.PauseInputMode;
 import com.perplexinggames.ironsoul.input.state.PlayingInputMode;
 import com.perplexinggames.ironsoul.input.strategy.GameInputCoordinator;
@@ -115,7 +118,17 @@ public class FirstScreen implements Screen {
         EnumMap<GameStateType, GameState> states = new EnumMap<>(GameStateType.class);
         states.put(GameStateType.MAIN_MENU, new MainMenuState(new MainMenuInputMode()));
         states.put(GameStateType.PLAYING, new PlayingState(new PlayingInputMode()));
-        states.put(GameStateType.PAUSE, new PauseState(new PauseInputMode()));
+        states.put(GameStateType.PAUSED, new PauseState(new PauseInputMode()));
+        states.put(GameStateType.MAP_OPEN, new MapOpenState(new OverlayInputMode(
+            com.perplexinggames.ironsoul.input.binding.InputAction.MAP,
+            com.perplexinggames.ironsoul.input.binding.InputAction.INVENTORY,
+            com.perplexinggames.ironsoul.input.binding.InputAction.PAUSE
+        )));
+        states.put(GameStateType.INVENTORY_OPEN, new InventoryOpenState(new OverlayInputMode(
+            com.perplexinggames.ironsoul.input.binding.InputAction.MAP,
+            com.perplexinggames.ironsoul.input.binding.InputAction.INVENTORY,
+            com.perplexinggames.ironsoul.input.binding.InputAction.PAUSE
+        )));
         states.put(GameStateType.DIALOGUE, new DialogueState(new DialogueInputMode()));
         states.put(GameStateType.CUTSCENE, new CutsceneState(new CutsceneInputMode()));
         return states;

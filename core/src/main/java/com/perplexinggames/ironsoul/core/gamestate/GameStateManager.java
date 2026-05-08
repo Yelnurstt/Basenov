@@ -20,23 +20,35 @@ public class GameStateManager {
 
     public void changeState(GameStateType type) {
         currentState = requireState(type);
-        if (type != GameStateType.PAUSE) {
+        if (type != GameStateType.PAUSED) {
             resumeState = currentState;
         }
     }
 
     public void togglePause() {
-        if (currentState.getType() == GameStateType.PAUSE) {
+        if (currentState.getType() == GameStateType.PAUSED) {
             currentState = resumeState;
             return;
         }
 
         resumeState = currentState;
-        currentState = requireState(GameStateType.PAUSE);
+        currentState = requireState(GameStateType.PAUSED);
     }
 
     public boolean isPaused() {
-        return currentState.getType() == GameStateType.PAUSE;
+        return currentState.getType() == GameStateType.PAUSED;
+    }
+
+    public boolean isState(GameStateType type) {
+        return currentState.getType() == type;
+    }
+
+    public void toggleState(GameStateType targetState, GameStateType fallbackState) {
+        if (currentState.getType() == targetState) {
+            changeState(fallbackState);
+            return;
+        }
+        changeState(targetState);
     }
 
     private GameState requireState(GameStateType type) {

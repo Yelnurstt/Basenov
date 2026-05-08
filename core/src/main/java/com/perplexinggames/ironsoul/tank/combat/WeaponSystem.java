@@ -1,10 +1,12 @@
 package com.perplexinggames.ironsoul.tank.combat;
 
+import com.perplexinggames.ironsoul.projectile.ProjectileSystem;
 import com.perplexinggames.ironsoul.tank.controller.AimDirection;
 import com.perplexinggames.ironsoul.tank.controller.TankController;
 
 public class WeaponSystem {
     private final TankController tankController;
+    private final ProjectileSystem projectileSystem;
     private AimDirection aimDirection = AimDirection.FORWARD;
     private float primaryCooldownRemaining;
     private float secondaryCooldownRemaining;
@@ -13,7 +15,12 @@ public class WeaponSystem {
     private String lastCombatAction = "Weapons safe";
 
     public WeaponSystem(TankController tankController) {
+        this(tankController, null);
+    }
+
+    public WeaponSystem(TankController tankController, ProjectileSystem projectileSystem) {
         this.tankController = tankController;
+        this.projectileSystem = projectileSystem;
     }
 
     public void update(float delta) {
@@ -38,6 +45,13 @@ public class WeaponSystem {
             return;
         }
         primaryCooldownRemaining = 0.35f;
+        if (projectileSystem != null) {
+            projectileSystem.spawnPrimaryShot(
+                tankController.getModel(),
+                tankController.getFacingDirection(),
+                aimDirection
+            );
+        }
         lastCombatAction = "Primary cannon fired " + aimDirection.name().toLowerCase();
     }
 

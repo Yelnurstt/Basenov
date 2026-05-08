@@ -28,4 +28,8 @@ public class GameInputCoordinator {
     public String getActiveStrategyName() {
         return activeStrategy.getName();
     }
+
+    public String getLastExecutedCommand() {
+        return commandExecutor.getLastExecutedCommand();
+    }
 }
