@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.perplexinggames.ironsoul.core.gameplay.DialogueSystem;
 import com.perplexinggames.ironsoul.core.gameplay.InteractionSystem;
 import com.perplexinggames.ironsoul.core.gameplay.OverlayController;
@@ -50,6 +51,8 @@ public class ControlDemoScreen implements Screen {
 
     private OrthographicCamera camera;
     private FitViewport viewport;
+    private OrthographicCamera hudCamera;
+    private ScreenViewport hudViewport;
     private ShapeRenderer shapeRenderer;
     private SpriteBatch spriteBatch;
     private BitmapFont font;
@@ -71,11 +74,14 @@ public class ControlDemoScreen implements Screen {
     public void show() {
         camera = new OrthographicCamera();
         viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
+        hudCamera = new OrthographicCamera();
+        hudViewport = new ScreenViewport(hudCamera);
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
         font = new BitmapFont();
         font.getData().setScale(1f);
         tankDebugRenderer = new TankDebugRenderer();
+        hudViewport.update(com.badlogic.gdx.Gdx.graphics.getWidth(), com.badlogic.gdx.Gdx.graphics.getHeight(), true);
 
         initializeDemo();
         debugHud = new DebugHud(font, keyboardBindings);
@@ -146,16 +152,18 @@ public class ControlDemoScreen implements Screen {
         camera.update();
 
         shapeRenderer.setProjectionMatrix(camera.combined);
-        spriteBatch.setProjectionMatrix(camera.combined);
 
         renderWorld();
         tankDebugRenderer.render(shapeRenderer, tankController, weaponSystem);
         projectileSystem.render(shapeRenderer);
         renderOverlayTint();
+
+        hudViewport.apply();
+        spriteBatch.setProjectionMatrix(hudCamera.combined);
         debugHud.render(
             spriteBatch,
-            WORLD_WIDTH,
-            WORLD_HEIGHT,
+            hudViewport.getWorldWidth(),
+            hudViewport.getWorldHeight(),
             inputCoordinator,
             gameStateManager,
             tankController,
@@ -205,6 +213,7 @@ public class ControlDemoScreen implements Screen {
             return;
         }
         viewport.update(width, height, true);
+        hudViewport.update(width, height, true);
     }
 
     @Override

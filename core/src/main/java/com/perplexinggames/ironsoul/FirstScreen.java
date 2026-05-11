@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.perplexinggames.ironsoul.core.gameplay.DialogueSystem;
 import com.perplexinggames.ironsoul.core.gameplay.InteractionSystem;
 import com.perplexinggames.ironsoul.core.gameplay.OverlayController;
@@ -55,6 +56,8 @@ public class FirstScreen implements Screen {
 
     private OrthographicCamera camera;
     private FitViewport viewport;
+    private OrthographicCamera hudCamera;
+    private ScreenViewport hudViewport;
     private ShapeRenderer shapeRenderer;
     private SpriteBatch spriteBatch;
     private BitmapFont font;
@@ -72,10 +75,13 @@ public class FirstScreen implements Screen {
     public void show() {
         camera = new OrthographicCamera();
         viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
+        hudCamera = new OrthographicCamera();
+        hudViewport = new ScreenViewport(hudCamera);
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
         font = new BitmapFont();
-        font.getData().setScale(1.1f);
+        font.getData().setScale(1f);
+        hudViewport.update(com.badlogic.gdx.Gdx.graphics.getWidth(), com.badlogic.gdx.Gdx.graphics.getHeight(), true);
 
         initializeArchitecture();
     }
@@ -150,6 +156,7 @@ public class FirstScreen implements Screen {
         camera.update();
 
         renderWorld();
+        hudViewport.apply();
         renderHud();
     }
 
@@ -212,13 +219,13 @@ public class FirstScreen implements Screen {
     }
 
     private void renderHud() {
-        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.setProjectionMatrix(hudCamera.combined);
         spriteBatch.begin();
         font.setColor(Color.WHITE);
 
-        float startX = 0.8f;
-        float startY = WORLD_HEIGHT - 0.8f;
-        float lineHeight = 1.05f;
+        float startX = 24f;
+        float startY = hudViewport.getWorldHeight() - 24f;
+        float lineHeight = 20f;
 
         font.draw(spriteBatch, "Iron Soul Input Architecture Demo", startX, startY);
         font.draw(spriteBatch, "Strategy: " + inputCoordinator.getActiveStrategyName(), startX, startY - lineHeight);
@@ -253,16 +260,16 @@ public class FirstScreen implements Screen {
 
         if (dialogueSystem.isActive()) {
             font.setColor(new Color(0.96f, 0.91f, 0.72f, 1f));
-            font.draw(spriteBatch, "Dialogue: " + dialogueSystem.getCurrentLine(), startX, 2.6f);
+            font.draw(spriteBatch, "Dialogue: " + dialogueSystem.getCurrentLine(), startX, 44f);
         } else if (overlayController.isMapOpen()) {
             font.setColor(new Color(0.7f, 0.86f, 0.97f, 1f));
-            font.draw(spriteBatch, "Map overlay active", startX, 2.6f);
+            font.draw(spriteBatch, "Map overlay active", startX, 44f);
         } else if (overlayController.isInventoryOpen()) {
             font.setColor(new Color(0.78f, 0.94f, 0.76f, 1f));
-            font.draw(spriteBatch, "Inventory overlay active", startX, 2.6f);
+            font.draw(spriteBatch, "Inventory overlay active", startX, 44f);
         } else if (gameStateManager.isPaused()) {
             font.setColor(new Color(0.98f, 0.86f, 0.7f, 1f));
-            font.draw(spriteBatch, "Paused: gameplay commands blocked by PauseInputMode", startX, 2.6f);
+            font.draw(spriteBatch, "Paused: gameplay commands blocked by PauseInputMode", startX, 44f);
         }
 
         spriteBatch.end();
@@ -274,6 +281,7 @@ public class FirstScreen implements Screen {
             return;
         }
         viewport.update(width, height, true);
+        hudViewport.update(width, height, true);
     }
 
     @Override

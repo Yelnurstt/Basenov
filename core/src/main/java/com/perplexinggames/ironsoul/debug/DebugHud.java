@@ -31,8 +31,8 @@ public class DebugHud {
 
     public void render(
         SpriteBatch batch,
-        float worldWidth,
-        float worldHeight,
+        float screenWidth,
+        float screenHeight,
         GameInputCoordinator inputCoordinator,
         GameStateManager gameStateManager,
         TankController tankController,
@@ -44,9 +44,9 @@ public class DebugHud {
         batch.begin();
         font.setColor(Color.WHITE);
 
-        float x = 0.7f;
-        float y = worldHeight - 0.7f;
-        float line = 0.95f;
+        float x = 24f;
+        float y = screenHeight - 24f;
+        float line = 20f;
         TankModel model = tankController.getModel();
 
         draw(batch, "Control Demo Screen", x, y);
@@ -77,13 +77,13 @@ public class DebugHud {
 
         if (gameStateManager.isPaused()) {
             font.setColor(new Color(1f, 0.86f, 0.55f, 1f));
-            draw(batch, "PAUSED: movement and combat commands are blocked", worldWidth * 0.38f, 2.8f);
+            draw(batch, "PAUSED: movement and combat commands are blocked", screenWidth * 0.38f, 44f);
         } else if (overlayController.isMapOpen()) {
             font.setColor(new Color(0.72f, 0.89f, 1f, 1f));
-            draw(batch, "MAP OVERLAY ACTIVE", worldWidth * 0.42f, 2.8f);
+            draw(batch, "MAP OVERLAY ACTIVE", screenWidth * 0.42f, 44f);
         } else if (overlayController.isInventoryOpen()) {
             font.setColor(new Color(0.76f, 0.96f, 0.78f, 1f));
-            draw(batch, "INVENTORY OVERLAY ACTIVE", worldWidth * 0.38f, 2.8f);
+            draw(batch, "INVENTORY OVERLAY ACTIVE", screenWidth * 0.38f, 44f);
         }
 
         batch.end();
