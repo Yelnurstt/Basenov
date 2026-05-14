@@ -2,14 +2,14 @@
 package com.perplexinggames.ironsoul.core;
 
 import com.badlogic.gdx.Game;
-import com.perplexinggames.ironsoul.screens.DemoGameScreen;
+import com.perplexinggames.ironsoul.screens.LevelEditorDemoScreen;
 
 public class Main extends Game {
 
     @Override
     public void create() {
         // Запускаем демо для тестирования тайлов
-        setScreen(new DemoGameScreen());
+        setScreen(new LevelEditorDemoScreen());
     }
 
     @Override
