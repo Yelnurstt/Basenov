@@ -133,17 +133,32 @@ public class LevelEditorDemoScreen implements Screen {
     }
 
     private void updateGameplay(float delta) {
-        float previousX = player.getX();
-        float previousY = player.getY();
-
         player.update(delta);
-        clampPlayerToLevelBounds();
+
+        // X movement
+        float previousX = player.getX();
+        player.setX(player.getX() + player.getVelocity().x * delta);
 
         if (levelCollision.collides(player.getBoundingBox())) {
             player.setX(previousX);
-            player.setY(previousY);
-            player.getVelocity().setZero();
+            player.getVelocity().x = 0;
         }
+
+        // Y movement
+        float previousY = player.getY();
+        player.setY(player.getY() + player.getVelocity().y * delta);
+
+        if (levelCollision.collides(player.getBoundingBox())) {
+            boolean wasFalling = player.getVelocity().y < 0;
+
+            player.setY(previousY);
+            player.getVelocity().y = 0;
+            player.setGrounded(wasFalling);
+        } else {
+            player.setGrounded(false);
+        }
+
+        clampPlayerToLevelBounds();
 
         centerCameraOnPlayer();
         clampCameraToLevelBounds();

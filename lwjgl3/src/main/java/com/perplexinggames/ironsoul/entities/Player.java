@@ -7,9 +7,16 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.perplexinggames.ironsoul.utils.TextureGenerator;
 
 public class Player extends Entity {
+    private static final float GRAVITY = -900f;
+    private static final float JUMP_FORCE = 450f;
+
     private final Texture texture;
     private final float speed;
+
     private boolean hasKey;
+    private boolean grounded = false;
+    private boolean physicsStarted = false;
+
     private final java.util.ArrayList<String> inventory;
 
     public Player(float x, float y, float width, float height) {
@@ -21,32 +28,54 @@ public class Player extends Entity {
     }
 
     @Override
+
     public void update(float delta) {
-        handleInput();
-        super.update(delta);
+        handleInput(delta);
     }
 
-    private void handleInput() {
-        velocity.set(0, 0);
+    private void handleInput(float delta) {
+        if (!physicsStarted) {
+            velocity.set(0, 0);
 
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            velocity.y += speed;
+            if (Gdx.input.isKeyPressed(Input.Keys.A)
+                || Gdx.input.isKeyPressed(Input.Keys.D)
+                || Gdx.input.isKeyPressed(Input.Keys.LEFT)
+                || Gdx.input.isKeyPressed(Input.Keys.RIGHT)
+                || Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+                physicsStarted = true;
+            } else {
+                return;
+            }
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            velocity.y -= speed;
+
+        velocity.x = 0;
+
+        if (Gdx.input.isKeyPressed(Input.Keys.A)
+            || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            velocity.x = -speed;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            velocity.x -= speed;
+
+        if (Gdx.input.isKeyPressed(Input.Keys.D)
+            || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            velocity.x = speed;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            velocity.x += speed;
+
+        if (grounded && Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            velocity.y = JUMP_FORCE;
+            grounded = false;
         }
+
+        velocity.y += GRAVITY * delta;
 
         isInteracting = Gdx.input.isKeyJustPressed(Input.Keys.E);
+    }
 
-        if (velocity.len() > 0) {
-            velocity.nor().scl(speed);
-        }
+    public void setGrounded(boolean grounded) {
+        this.grounded = grounded;
+    }
+
+    public boolean isGrounded() {
+        return grounded;
     }
 
     @Override
