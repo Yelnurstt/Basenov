@@ -35,7 +35,7 @@ public class GameScreen implements Screen {
         // Генерация тестовой карты
         tileMap.generateTestMap();
 
-        player = new Player(100, 100, 32, 32);
+        player = new Player(100, 100);
     }
 
     @Override

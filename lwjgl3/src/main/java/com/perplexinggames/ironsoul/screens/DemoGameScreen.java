@@ -49,9 +49,8 @@ public class DemoGameScreen implements Screen {
         createTileMap();
 
         // Создание игрока (стартовая позиция)
-        player = new Player(TILE_SIZE * 2, TILE_SIZE * 2, TILE_SIZE, TILE_SIZE);
-
-        // Настройка камеры
+        // Делаем танк шириной 64 и высотой 48
+        player = new Player(TILE_SIZE * 2, TILE_SIZE * 2);        // Настройка камеры
         camera.position.set(player.getX(), player.getY(), 0);
         camera.update();
     }

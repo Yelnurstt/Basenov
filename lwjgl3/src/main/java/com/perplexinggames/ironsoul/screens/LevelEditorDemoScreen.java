@@ -54,7 +54,7 @@ public class LevelEditorDemoScreen implements Screen {
         levelEditor.clearHistory();
 
         float playerSize = runtimeLevel.getTileSize();
-        player = new Player(playerSize * 2f, playerSize * 2f, playerSize, playerSize);
+        player = new Player(playerSize * 2f, playerSize * 2f); // Убрали лишние цифры!
 
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
         Gdx.input.setInputProcessor(editorInputAdapter);
@@ -123,6 +123,14 @@ public class LevelEditorDemoScreen implements Screen {
 
     private void update(float delta) {
         editorInputAdapter.update(delta);
+
+        // --- КОД ДЛЯ ПРИЦЕЛИВАНИЯ ---
+        // Получаем координаты мыши и переводим их в координаты игрового мира
+        com.badlogic.gdx.math.Vector3 mousePos = new com.badlogic.gdx.math.Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        worldCamera.unproject(mousePos);
+        // Передаем координаты танку
+        player.setAimTarget(mousePos.x, mousePos.y);
+        // ----------------------------------
 
         if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
             updateGameplay(delta);
