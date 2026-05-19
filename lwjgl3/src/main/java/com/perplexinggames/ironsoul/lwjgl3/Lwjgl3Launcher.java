@@ -2,8 +2,8 @@ package com.perplexinggames.ironsoul.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.perplexinggames.ironsoul.Main;
-
+//import com.perplexinggames.ironsoul.Main;
+import com.perplexinggames.ironsoul.core.Main;
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
     private static final String MAC_ANGLE_PROPERTY = "ironsoul.macos.angle";
@@ -20,7 +20,6 @@ public class Lwjgl3Launcher {
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        boolean useMacAngle = shouldUseMacAngle();
 
         configuration.setTitle("iron-soul");
         //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
@@ -34,6 +33,7 @@ public class Lwjgl3Launcher {
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
         configuration.setWindowedMode(640, 480);
+
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
@@ -46,38 +46,6 @@ public class Lwjgl3Launcher {
         //// You can choose to add the following line and the mentioned dependency if you want; they
         //// are not intended for games that use GL30 (which is compatibility with OpenGL ES 3.0).
         //// Know that it might not work well in some cases.
-        if (useMacAngle) {
-            configuration.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.ANGLE_GLES20, 0, 0);
-        }
-
-        logLaunchConfiguration(useMacAngle);
-
         return configuration;
-    }
-
-    private static boolean shouldUseMacAngle() {
-        if (!isMac()) {
-            return false;
-        }
-        if (Boolean.getBoolean(MAC_ANGLE_PROPERTY)) {
-            return true;
-        }
-
-        String envValue = System.getenv(MAC_ANGLE_ENV);
-        return envValue != null && (envValue.equalsIgnoreCase("true") || envValue.equals("1"));
-    }
-
-    private static boolean isMac() {
-        return System.getProperty("os.name", "").toLowerCase().contains("mac");
-    }
-
-    private static void logLaunchConfiguration(boolean useMacAngle) {
-        System.out.printf(
-            "Iron Soul launch: os=%s arch=%s java=%s angle=%s%n",
-            System.getProperty("os.name", "unknown"),
-            System.getProperty("os.arch", "unknown"),
-            System.getProperty("java.version", "unknown"),
-            useMacAngle
-        );
     }
 }

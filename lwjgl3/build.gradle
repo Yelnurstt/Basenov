@@ -1,3 +1,4 @@
+import io.github.fourlastor.construo.Target
 
 buildscript {
   repositories {
@@ -14,9 +15,6 @@ plugins {
   id "application"
 }
 apply plugin: 'io.github.fourlastor.construo'
-
-
-import io.github.fourlastor.construo.Target
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 application.mainClass = 'com.perplexinggames.ironsoul.lwjgl3.Lwjgl3Launcher'
