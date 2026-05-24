@@ -1,5 +1,5 @@
 package com.perplexinggames.ironsoul.screens;
-
+import com.perplexinggames.ironsoul.entities.Enemy;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
@@ -45,6 +45,8 @@ public class LevelEditorDemoScreen implements Screen {
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
+    private Enemy enemy;
+    private float damageCooldown = 0f;
     private EditorSideMenu editorSideMenu;
     private InputMultiplexer inputMultiplexer;
     private WorldStreamingService streamingService;
@@ -81,7 +83,7 @@ public class LevelEditorDemoScreen implements Screen {
         transitionService = new WorldTransitionService(levelEditor.getWorldData(), streamingService,
             new PhysicsTankRuntimeAdapter(tank), blockId -> levelEditor.selectActiveBlock(blockId));
         spawnTankAtActiveBlock();
-
+        enemy = new Enemy(700, 300, 40, 40);
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
@@ -126,6 +128,7 @@ public class LevelEditorDemoScreen implements Screen {
         batch.setProjectionMatrix(worldCamera.combined);
         batch.begin();
         tank.render(batch);
+        enemy.render(batch);
         batch.end();
 
         renderOverlay();
@@ -171,6 +174,7 @@ public class LevelEditorDemoScreen implements Screen {
         }
         batch.dispose();
         font.dispose();
+        enemy.dispose();
         levelRenderer.dispose();
         tank.dispose();
         if (editorSideMenu != null) {
@@ -196,9 +200,30 @@ public class LevelEditorDemoScreen implements Screen {
         synchronizeGameplayBlockSelection();
         tank.update(delta);
         transitionService.update(levelEditor.getActiveBlock(), Gdx.input.isKeyJustPressed(Input.Keys.E));
+        enemy.update(delta);
+
+        if (damageCooldown > 0f) {
+            damageCooldown -= delta;
+        }
         centerCameraOnTank();
         clampCameraToLevelBounds();
         worldCamera.update();
+        if (!enemy.isDead()
+            && tank.getBounds().overlaps(enemy.getBounds())
+            && damageCooldown <= 0f) {
+
+            damageCooldown = 1f;
+
+            System.out.println("Tank damaged by enemy!");
+
+            enemy.takeDamage(10f);
+
+            System.out.println("Enemy HP: " + enemy.getHealth());
+
+            if (enemy.isDead()) {
+                System.out.println("ENEMY DEAD");
+            }
+        }
     }
 
     private void synchronizeGameplayBlockSelection() {
