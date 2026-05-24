@@ -14,7 +14,7 @@ import com.perplexinggames.ironsoul.terrain.SegmentTerrainCollisionProvider;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainSegment;
 
-public class ControlDemoScreen implements Screen {
+public class TerrainDemoScreen implements Screen {
     private SpriteBatch batch;
     private ShapeRenderer shapeRenderer;
     private BitmapFont font;
@@ -33,54 +33,55 @@ public class ControlDemoScreen implements Screen {
         font = new BitmapFont();
         camera = new OrthographicCamera(1280, 720);
 
-        // 1. Создаем наш ландшафт из линий
+        // 1. Создаем наш ландшафт (MVP требования)
         terrainPath = new TerrainPath();
-        terrainPath.addSegment(-500, 100, 300, 100);       // Плоско
-        terrainPath.addSegment(300, 100, 600, 300);        // Подъем
-        terrainPath.addSegment(600, 300, 900, 300);        // Верхняя площадка
-        terrainPath.addSegment(900, 300, 1100, 100);       // Спуск
-        // Пропасть между 1100 и 1250!
-        terrainPath.addSegment(1250, 100, 1500, 400);      // Резкий подъем
-        terrainPath.addSegment(1500, 400, 2000, 400);      // Финальная площадка
+        // flat -> slope up -> flat -> slope down -> gap -> steep slope
+        terrainPath.addSegment(-500, 100, 300, 100);       // Flat
+        terrainPath.addSegment(300, 100, 600, 300);        // Slope Up
+        terrainPath.addSegment(600, 300, 900, 300);        // Flat High
+        terrainPath.addSegment(900, 300, 1100, 100);       // Slope Down
+        // GAP (пропасть) между 1100 и 1250!
+        terrainPath.addSegment(1250, 100, 1500, 400);      // Steep Slope
+        terrainPath.addSegment(1500, 400, 2000, 400);      // Final Flat
 
-        // 2. Создаем провайдер коллизий для физики
+        // 2. Создаем провайдер коллизий
         SegmentTerrainCollisionProvider collisionProvider = new SegmentTerrainCollisionProvider(terrainPath);
 
-        // 3. Спавним танк в воздухе над стартовой точкой
+        // 3. Создаем танк (спавним в воздухе над стартовой платформой)
         tank = new PhysicsTank(0, 200, collisionProvider);
     }
 
     @Override
     public void render(float delta) {
-        // --- Прицеливание башней ---
+        // --- Прицеливание башней (переводим координаты мыши в игровой мир) ---
         Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
         camera.unproject(mousePos);
         tank.setAimTarget(mousePos.x, mousePos.y);
 
-        // --- Обновление физики ---
+        // --- Обновляем физику и логику танка ---
         tank.update(delta);
 
         // --- Камера плавно следит за танком ---
         camera.position.x += (tank.physics.x - camera.position.x) * 5f * delta;
-        camera.position.y += ((tank.physics.y + 150f) - camera.position.y) * 5f * delta;
+        camera.position.y += ((tank.physics.y + 150f) - camera.position.y) * 5f * delta; // Чуть выше танка
         camera.update();
 
         // Очистка экрана
         Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // === 1. ОТРИСОВКА ЛАНДШАФТА И ДЕБАГА ===
+        // === 1. ОТРИСОВКА ЛАНДШАФТА И ДЕБАГА (Линии) ===
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
 
-        // Земля (зеленая)
+        // Рисуем отрезки земли (зеленые)
         shapeRenderer.setColor(Color.LIME);
         for (TerrainSegment seg : terrainPath.getSegments()) {
             shapeRenderer.line(seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
         }
 
         if (debugMode) {
-            // Лучи-щупы гусениц (красные)
+            // Рисуем лучи (Probes - красные)
             shapeRenderer.setColor(Color.RED);
             float pY = tank.physics.y + tank.physics.probeHeightOffset;
             float lX = tank.physics.x - tank.physics.trackWidth / 2f;
@@ -89,7 +90,7 @@ public class ControlDemoScreen implements Screen {
             shapeRenderer.line(lX, pY, lX, pY - tank.physics.probeLength);
             shapeRenderer.line(rX, pY, rX, pY - tank.physics.probeLength);
 
-            // Нормали поверхности (голубые векторы)
+            // Рисуем точки контакта и нормали (голубые векторы)
             shapeRenderer.setColor(Color.CYAN);
             if (tank.physics.leftContact.hasContact) {
                 shapeRenderer.circle(tank.physics.leftContact.point.x, tank.physics.leftContact.point.y, 4);
@@ -104,13 +105,13 @@ public class ControlDemoScreen implements Screen {
         }
         shapeRenderer.end();
 
-        // === 2. ОТРИСОВКА ТАНКА ===
+        // === 2. ОТРИСОВКА ТАНКА (Спрайты с матрицами) ===
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         tank.render(batch);
         batch.end();
 
-        // === 3. ОТРИСОВКА ИНФОРМАЦИИ (UI) ===
+        // === 3. ОТРИСОВКА ТЕКСТА (UI) ===
         batch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch.begin();
         font.draw(batch, "State: " + tank.physics.state, 10, Gdx.graphics.getHeight() - 10);
