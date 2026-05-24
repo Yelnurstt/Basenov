@@ -25,6 +25,9 @@ import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 import com.perplexinggames.ironsoul.physics.BasicPhysicsController;
 import com.perplexinggames.ironsoul.core.Main;
+import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
+import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 
 public class LevelEditorDemoScreen implements Screen {
     private Main game;
@@ -37,6 +40,8 @@ public class LevelEditorDemoScreen implements Screen {
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
+    private EditorSideMenu editorSideMenu;
+    private InputMultiplexer inputMultiplexer;
 
     public LevelEditorDemoScreen(Main game) {
         this.game = game;
@@ -66,7 +71,14 @@ public class LevelEditorDemoScreen implements Screen {
         tank = new PhysicsTank(tileSize * 2f, getInitialTankSpawnY(tileSize), new RuntimeTerrainCollisionProvider(runtimeLevel));
 
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
-        Gdx.input.setInputProcessor(editorInputAdapter);
+        
+        Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
+        editorSideMenu = new EditorSideMenu(levelEditor, skin);
+
+        inputMultiplexer = new InputMultiplexer();
+        inputMultiplexer.addProcessor(editorSideMenu.getStage());
+        inputMultiplexer.addProcessor(editorInputAdapter);
+        Gdx.input.setInputProcessor(inputMultiplexer);
 
         centerCameraOnTank();
         worldCamera.update();
@@ -101,6 +113,9 @@ public class LevelEditorDemoScreen implements Screen {
         batch.end();
 
         renderOverlay();
+
+        editorSideMenu.act(delta);
+        editorSideMenu.draw();
     }
 
     @Override
@@ -113,6 +128,9 @@ public class LevelEditorDemoScreen implements Screen {
         hudCamera.setToOrtho(false, width, height);
         worldCamera.update();
         hudCamera.update();
+        if (editorSideMenu != null) {
+            editorSideMenu.resize(width, height);
+        }
     }
 
     @Override
@@ -125,20 +143,23 @@ public class LevelEditorDemoScreen implements Screen {
 
     @Override
     public void hide() {
-        if (Gdx.input.getInputProcessor() == editorInputAdapter) {
+        if (Gdx.input.getInputProcessor() == inputMultiplexer) {
             Gdx.input.setInputProcessor(null);
         }
     }
 
     @Override
     public void dispose() {
-        if (Gdx.input.getInputProcessor() == editorInputAdapter) {
+        if (Gdx.input.getInputProcessor() == inputMultiplexer) {
             Gdx.input.setInputProcessor(null);
         }
         batch.dispose();
         font.dispose();
         levelRenderer.dispose();
         tank.dispose();
+        if (editorSideMenu != null) {
+            editorSideMenu.dispose();
+        }
     }
 
     private void update(float delta) {

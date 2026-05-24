@@ -22,12 +22,12 @@ import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import com.perplexinggames.ironsoul.editor.ui.EditorToolController;
 
-public class LevelEditor {
+public class LevelEditor implements EditorToolController {
     public static final String DEFAULT_LEVEL_PATH = "levels/test-level.json";
     public static final String DEFAULT_TERRAIN_PATH_ID = "main-terrain";
     private static final int DEFAULT_LEVEL_WIDTH = 40;
