@@ -23,6 +23,7 @@ import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.level.serialization.JsonLevelSerializer;
 import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
 import com.perplexinggames.ironsoul.physics.BasicPhysicsController;
+import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 
 public class LevelEditorDemoScreen implements Screen {
     private SpriteBatch batch;
@@ -64,7 +65,7 @@ public class LevelEditorDemoScreen implements Screen {
             runtimeLevel,
             player,
             new PlayerInputController(player),
-            new BasicPhysicsController(player, runtimeLevel, levelCollision)
+            new BasicPhysicsController(player, runtimeLevel, levelCollision, new RuntimeTerrainCollisionProvider(runtimeLevel))
         );
 
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);

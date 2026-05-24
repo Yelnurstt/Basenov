@@ -10,7 +10,7 @@ public class TerrainPath {
     }
 
     private String id;
-    private List<TerrainPoint> points;
+    private ArrayList<TerrainPoint> points;
     private CurveType curveType;
     private String material;
     private float debugWidth;
@@ -33,7 +33,7 @@ public class TerrainPath {
         float friction
     ) {
         this.id = id;
-        this.points = Collections.unmodifiableList(new ArrayList<>(points));
+        this.points = new ArrayList<>(points == null ? Collections.emptyList() : points);
         this.curveType = curveType;
         this.material = material;
         this.debugWidth = debugWidth;
