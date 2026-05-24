@@ -1,9 +1,13 @@
 package com.perplexinggames.ironsoul.terrain;
 
 public class TerrainPoint {
-    private final String id;
-    private final float x;
-    private final float y;
+    private String id;
+    private float x;
+    private float y;
+
+    public TerrainPoint() {
+        this("", 0f, 0f);
+    }
 
     public TerrainPoint(String id, float x, float y) {
         this.id = id;
@@ -21,5 +25,9 @@ public class TerrainPoint {
 
     public float getY() {
         return y;
+    }
+
+    public TerrainPoint copy() {
+        return new TerrainPoint(id, x, y);
     }
 }

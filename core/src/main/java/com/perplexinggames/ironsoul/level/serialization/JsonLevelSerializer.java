@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.perplexinggames.ironsoul.level.LevelData;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
 
 public class JsonLevelSerializer implements LevelSerializer {
     private final Json json;
@@ -38,6 +39,15 @@ public class JsonLevelSerializer implements LevelSerializer {
         LevelData levelData = json.fromJson(LevelData.class, source.readString("UTF-8"));
         if (levelData.blocks == null) {
             levelData.blocks = new ArrayList<>();
+        }
+        if (levelData.terrainPaths == null) {
+            levelData.terrainPaths = new ArrayList<>();
+        }
+        for (int i = levelData.terrainPaths.size() - 1; i >= 0; i--) {
+            TerrainPath terrainPath = levelData.terrainPaths.get(i);
+            if (terrainPath == null || terrainPath.getId() == null || terrainPath.getId().isEmpty()) {
+                levelData.terrainPaths.remove(i);
+            }
         }
         return levelData;
     }

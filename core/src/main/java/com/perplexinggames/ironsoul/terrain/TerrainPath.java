@@ -9,12 +9,16 @@ public class TerrainPath {
         LINEAR
     }
 
-    private final String id;
-    private final List<TerrainPoint> points;
-    private final CurveType curveType;
-    private final String material;
-    private final float debugWidth;
-    private final float friction;
+    private String id;
+    private List<TerrainPoint> points;
+    private CurveType curveType;
+    private String material;
+    private float debugWidth;
+    private float friction;
+
+    public TerrainPath() {
+        this("", new ArrayList<>(), CurveType.LINEAR, "default", 4f, 1f);
+    }
 
     public TerrainPath(String id, List<TerrainPoint> points) {
         this(id, points, CurveType.LINEAR, "default", 4f, 1f);
@@ -41,7 +45,10 @@ public class TerrainPath {
     }
 
     public List<TerrainPoint> getPoints() {
-        return points;
+        if (points == null) {
+            points = new ArrayList<>();
+        }
+        return Collections.unmodifiableList(points);
     }
 
     public CurveType getCurveType() {
@@ -58,5 +65,17 @@ public class TerrainPath {
 
     public float getFriction() {
         return friction;
+    }
+
+    public TerrainPath copy() {
+        List<TerrainPoint> sourcePoints = getPoints();
+        List<TerrainPoint> pointCopies = new ArrayList<>(sourcePoints.size());
+        for (TerrainPoint point : sourcePoints) {
+            if (point != null) {
+                pointCopies.add(point.copy());
+            }
+        }
+        return new TerrainPath(id, pointCopies, curveType == null ? CurveType.LINEAR : curveType,
+            material == null ? "default" : material, debugWidth, friction);
     }
 }
