@@ -16,8 +16,8 @@ public class TerrainPointTool implements EditorToolStrategy {
     }
 
     @Override
-    public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, int button) {
-        TerrainPoint nearestPoint = levelEditor.findTerrainPointNearCell(gridX, gridY);
+    public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
+        TerrainPoint nearestPoint = levelEditor.findTerrainPointNear(worldX, worldY);
 
         if (button == Input.Buttons.RIGHT) {
             if (nearestPoint != null) {
@@ -38,25 +38,30 @@ public class TerrainPointTool implements EditorToolStrategy {
         }
 
         draggingPointId = levelEditor.createTerrainPointId();
-        levelEditor.executeCommand(new AddTerrainPointCommand(levelEditor, draggingPointId, gridX, gridY));
+        levelEditor.executeCommand(new AddTerrainPointCommand(levelEditor, draggingPointId, worldX, worldY));
     }
 
     @Override
-    public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY) {
+    public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
         if (draggingPointId == null) {
             return;
         }
-        levelEditor.executeCommand(new MoveTerrainPointCommand(levelEditor, draggingPointId, gridX, gridY));
+        levelEditor.executeCommand(new MoveTerrainPointCommand(levelEditor, draggingPointId, worldX, worldY));
     }
 
     @Override
-    public void onMouseUp(LevelEditor levelEditor, int gridX, int gridY, int button) {
+    public void onMouseUp(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
         if (button == Input.Buttons.LEFT) {
             draggingPointId = null;
         }
     }
 
     @Override
-    public void onMouseMove(LevelEditor levelEditor, int gridX, int gridY) {
+    public void onMouseMove(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
+    }
+
+    @Override
+    public boolean usesContinuousWorldDrag() {
+        return true;
     }
 }

@@ -11,21 +11,21 @@ public class SelectBlockTool implements EditorToolStrategy {
     }
 
     @Override
-    public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, int button) {
+    public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
         if (button == Input.Buttons.LEFT) {
             levelEditor.executeCommand(new SelectBlockCommand(levelEditor, gridX, gridY));
         }
     }
 
     @Override
-    public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY) {
+    public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
     }
 
     @Override
-    public void onMouseUp(LevelEditor levelEditor, int gridX, int gridY, int button) {
+    public void onMouseUp(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
     }
 
     @Override
-    public void onMouseMove(LevelEditor levelEditor, int gridX, int gridY) {
+    public void onMouseMove(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
     }
 }

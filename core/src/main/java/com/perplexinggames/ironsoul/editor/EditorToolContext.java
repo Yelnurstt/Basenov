@@ -17,19 +17,23 @@ public class EditorToolContext {
         return activeTool;
     }
 
-    public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, int button) {
-        activeTool.onMouseDown(levelEditor, gridX, gridY, button);
+    public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
+        activeTool.onMouseDown(levelEditor, gridX, gridY, worldX, worldY, button);
     }
 
-    public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY) {
-        activeTool.onMouseDrag(levelEditor, gridX, gridY);
+    public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
+        activeTool.onMouseDrag(levelEditor, gridX, gridY, worldX, worldY);
     }
 
-    public void onMouseUp(LevelEditor levelEditor, int gridX, int gridY, int button) {
-        activeTool.onMouseUp(levelEditor, gridX, gridY, button);
+    public void onMouseUp(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
+        activeTool.onMouseUp(levelEditor, gridX, gridY, worldX, worldY, button);
     }
 
-    public void onMouseMove(LevelEditor levelEditor, int gridX, int gridY) {
-        activeTool.onMouseMove(levelEditor, gridX, gridY);
+    public void onMouseMove(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
+        activeTool.onMouseMove(levelEditor, gridX, gridY, worldX, worldY);
+    }
+
+    public boolean usesContinuousWorldDrag() {
+        return activeTool.usesContinuousWorldDrag();
     }
 }
