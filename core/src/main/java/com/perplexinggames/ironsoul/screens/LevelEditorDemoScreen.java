@@ -23,8 +23,11 @@ import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
+import com.perplexinggames.ironsoul.physics.BasicPhysicsController;
+import com.perplexinggames.ironsoul.core.Main;
 
 public class LevelEditorDemoScreen implements Screen {
+    private Main game;
     private SpriteBatch batch;
     private BitmapFont font;
     private OrthographicCamera worldCamera;
@@ -34,6 +37,10 @@ public class LevelEditorDemoScreen implements Screen {
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
+
+    public LevelEditorDemoScreen(Main game) {
+        this.game = game;
+    }
 
     @Override
     public void show() {
@@ -67,6 +74,11 @@ public class LevelEditorDemoScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
+            game.showMainMenu();
+            return;
+        }
+
         update(delta);
 
         ScreenUtils.clear(0.09f, 0.1f, 0.12f, 1f);

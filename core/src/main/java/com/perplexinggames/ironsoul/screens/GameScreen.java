@@ -10,13 +10,19 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.perplexinggames.ironsoul.tiles.TileMap;
 import com.perplexinggames.ironsoul.tiles.TileSet;
 import com.perplexinggames.ironsoul.entities.Player;
+import com.perplexinggames.ironsoul.core.Main;
 
 public class GameScreen implements Screen {
+    private Main game;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private TileMap tileMap;
     private Player player;
     private Texture tileTexture;
+
+    public GameScreen(Main game) {
+        this.game = game;
+    }
 
     @Override
     public void show() {
@@ -40,6 +46,11 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
+            game.showMainMenu();
+            return;
+        }
+
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
