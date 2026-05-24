@@ -1,0 +1,865 @@
+{
+id: test-level
+name: Test Level
+width: 40
+height: 30
+tileSize: 32
+blocks: [
+	{
+		x: 11
+		y: 2
+		type: SOLID
+	}
+	{
+		x: 17
+		y: 2
+		type: SOLID
+	}
+	{
+		x: 0
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 11
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 13
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 17
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 18
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 21
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 22
+		y: 3
+		type: SOLID
+	}
+	{
+		x: 0
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 1
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 3
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 12
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 19
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 21
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 23
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 24
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 25
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 27
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 28
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 29
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 30
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 34
+		y: 4
+		type: SOLID
+	}
+	{
+		x: 0
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 1
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 3
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 4
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 5
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 8
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 9
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 10
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 12
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 16
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 17
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 18
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 19
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 20
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 21
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 23
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 25
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 26
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 27
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 30
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 34
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 35
+		y: 5
+		type: SOLID
+	}
+	{
+		x: 3
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 4
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 5
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 7
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 8
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 11
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 12
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 13
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 17
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 18
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 19
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 20
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 21
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 22
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 24
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 26
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 27
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 28
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 30
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 35
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 36
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 6
+		type: SOLID
+	}
+	{
+		x: 4
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 5
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 6
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 8
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 9
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 11
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 13
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 14
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 15
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 19
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 22
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 23
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 25
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 26
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 27
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 29
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 30
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 32
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 34
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 35
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 36
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 37
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 7
+		type: SOLID
+	}
+	{
+		x: 5
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 6
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 10
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 11
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 16
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 19
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 23
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 24
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 25
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 26
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 27
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 28
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 29
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 30
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 36
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 37
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 8
+		type: SOLID
+	}
+	{
+		x: 9
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 11
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 12
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 17
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 20
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 23
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 24
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 27
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 38
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 9
+		type: SOLID
+	}
+	{
+		x: 11
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 12
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 15
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 16
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 18
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 20
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 21
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 24
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 28
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 36
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 10
+		type: SOLID
+	}
+	{
+		x: 17
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 18
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 19
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 21
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 22
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 30
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 35
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 36
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 37
+		y: 11
+		type: SOLID
+	}
+	{
+		x: 31
+		y: 12
+		type: SOLID
+	}
+	{
+		x: 34
+		y: 12
+		type: SOLID
+	}
+	{
+		x: 36
+		y: 12
+		type: SOLID
+	}
+	{
+		x: 37
+		y: 12
+		type: SOLID
+	}
+	{
+		x: 18
+		y: 13
+		type: SOLID
+	}
+	{
+		x: 32
+		y: 13
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 13
+		type: SOLID
+	}
+	{
+		x: 34
+		y: 13
+		type: SOLID
+	}
+	{
+		x: 37
+		y: 13
+		type: SOLID
+	}
+	{
+		x: 38
+		y: 13
+		type: SOLID
+	}
+	{
+		x: 33
+		y: 14
+		type: SOLID
+	}
+	{
+		x: 34
+		y: 14
+		type: SOLID
+	}
+	{
+		x: 38
+		y: 14
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 14
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 15
+		type: SOLID
+	}
+	{
+		x: 39
+		y: 16
+		type: SOLID
+	}
+]
+terrainPaths: [
+	{
+		id: main-terrain
+		points: [
+			{
+				id: terrain-point-2
+				x: 48
+				y: 176
+			}
+			{
+				id: terrain-point-1
+				x: 272
+				y: 208
+			}
+			{
+				id: terrain-point-3
+				x: 368
+				y: 304
+			}
+			{
+				id: terrain-point-4
+				x: 464
+				y: 208
+			}
+			{
+				id: terrain-point-5
+				x: 720
+				y: 208
+			}
+			{
+				id: terrain-point-7
+				x: 720
+				y: 432
+			}
+			{
+				id: terrain-point-8
+				x: 848
+				y: 528
+			}
+			{
+				id: terrain-point-9
+				x: 976
+				y: 464
+			}
+			{
+				id: terrain-point-10
+				x: 1136
+				y: 336
+			}
+			{
+				id: terrain-point-11
+				x: 1264
+				y: 656
+			}
+		]
+		curveType: LINEAR
+		material: editor-dirt
+		debugWidth: 4
+		friction: 1
+	}
+]
+}
