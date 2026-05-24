@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -19,7 +18,6 @@ import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
 import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
 import com.perplexinggames.ironsoul.entities.PhysicsTank;
-import com.perplexinggames.ironsoul.level.BlockData;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.LevelRenderer;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
@@ -102,6 +100,9 @@ public class LevelEditorDemoScreen implements Screen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             game.showMainMenu();
             return;
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F3) && editorSideMenu != null) {
+            editorSideMenu.toggleVisibility();
         }
 
         update(delta);
@@ -251,7 +252,10 @@ public class LevelEditorDemoScreen implements Screen {
     private void renderOverlay() {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
-        font.draw(batch, buildOverlayText(), 12f, hudCamera.viewportHeight - 12f);
+        String overlayText = buildOverlayText();
+        if (!overlayText.isBlank()) {
+            font.draw(batch, overlayText, 12f, hudCamera.viewportHeight - 12f);
+        }
         String interactionText = transitionService == null ? null : transitionService.getActiveInteractionText();
         if (interactionText != null && !interactionText.isBlank()) {
             font.draw(batch, interactionText, hudCamera.viewportWidth * 0.35f, 48f);
@@ -260,7 +264,6 @@ public class LevelEditorDemoScreen implements Screen {
     }
 
     private String buildOverlayText() {
-        WorldBlockData activeBlock = levelEditor.getActiveBlock();
         if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
             return new StringBuilder()
                 .append("MODE: GAMEPLAY\n")
@@ -269,44 +272,22 @@ public class LevelEditorDemoScreen implements Screen {
                 .append("CONNECTED: ").append(String.join(", ", streamingService.getConnectedBlocks())).append('\n')
                 .append("ACTIVE GATE: ").append(formatGate(transitionService.getActiveGate())).append('\n')
                 .append("LAST TRANSITION: ").append(transitionService.getLastTransitionLog()).append('\n')
-                .append("F2: editor mode | E: interact gate")
+                .append("F2: editor mode | F3: toggle menu | E: interact gate")
                 .toString();
         }
 
-        BlockData selectedBlock = levelEditor.getSelectedBlock();
-        String hoveredCell = formatCell(levelEditor.getHoveredCell());
-        String selectedCell = selectedBlock == null ? "none"
-            : selectedBlock.type + " @ (" + selectedBlock.x + ", " + selectedBlock.y + ")";
+        if (editorSideMenu != null && editorSideMenu.isMenuVisible()) {
+            return "";
+        }
 
+        WorldBlockData activeBlock = levelEditor.getActiveBlock();
         return new StringBuilder()
             .append("MODE: EDITOR\n")
-            .append("ACTIVE BLOCK: ").append(activeBlock == null ? "none" : activeBlock.id).append(" ")
-            .append(activeBlock == null ? "" : "(" + activeBlock.width + "x" + activeBlock.height + ")").append('\n')
-            .append("TOOL: ").append(levelEditor.getCurrentToolName()).append('\n')
-            .append("BLOCKS: ").append(levelEditor.getBlockIds().size()).append('\n')
-            .append("SOLID TILES: ").append(runtimeLevel.getBlockCount()).append('\n')
-            .append("TERRAIN PATHS: ").append(runtimeLevel.getTerrainPathCount())
-            .append(" | POINTS: ").append(runtimeLevel.getTerrainPointCount()).append('\n')
-            .append("GATES/SPAWNS: ").append(activeBlock == null ? "0/0" : activeBlock.gates.size() + "/" + activeBlock.spawnPoints.size()).append('\n')
-            .append("TERRAIN SNAP: ").append(levelEditor.isTerrainSnapToGrid() ? "ON" : "OFF").append('\n')
-            .append("HOVER: ").append(hoveredCell).append('\n')
-            .append("SELECTED TILE: ").append(selectedCell).append('\n')
-            .append("SELECTED GATE: ").append(formatGate(levelEditor.getSelectedGate())).append('\n')
-            .append("SELECTED SPAWN: ").append(levelEditor.getSelectedSpawnPoint() == null ? "none" : levelEditor.getSelectedSpawnPoint().id).append('\n')
-            .append("VALIDATION: ").append(levelEditor.getValidationSummary()).append('\n')
-            .append("STATUS: ").append(levelEditor.getLastStatusMessage()).append('\n')
-            .append("1-0 tools | T/Y/U/I gate props | Tab cycle block | S save | L load")
+            .append("BLOCK: ").append(activeBlock == null ? "none" : activeBlock.id).append('\n')
+            .append("SOLID: ").append(runtimeLevel.getBlockCount())
+            .append(" | TERRAIN: ").append(runtimeLevel.getTerrainPointCount()).append(" pts\n")
+            .append("F1: gameplay | F3: show menu")
             .toString();
-    }
-
-    private String formatCell(GridPoint2 cell) {
-        if (cell == null) {
-            return "none";
-        }
-        if (!runtimeLevel.isInside(cell.x, cell.y)) {
-            return "(" + cell.x + ", " + cell.y + ") [out]";
-        }
-        return "(" + cell.x + ", " + cell.y + ")";
     }
 
     private String formatGate(GateData gate) {

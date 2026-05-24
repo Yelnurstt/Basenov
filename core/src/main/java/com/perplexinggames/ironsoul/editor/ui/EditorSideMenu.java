@@ -35,6 +35,7 @@ public class EditorSideMenu {
     private final Skin skin;
     private final ButtonGroup<TextButton> buttonGroup;
     private final List<ToolButtonData> toolDataList;
+    private final Table rootTable;
 
     private final Label modeLabel;
     private final Label toolLabel;
@@ -49,6 +50,7 @@ public class EditorSideMenu {
     private final Label selectedSpawnLabel;
 
     private List<String> lastBlockIds = List.of();
+    private boolean menuVisible = true;
 
     private static class ToolButtonData {
         String id;
@@ -81,7 +83,7 @@ public class EditorSideMenu {
         this.toolDataList = new ArrayList<>();
         initToolData();
 
-        Table rootTable = new Table();
+        rootTable = new Table();
         rootTable.setFillParent(true);
         rootTable.align(Align.left | Align.top);
         stage.addActor(rootTable);
@@ -289,11 +291,15 @@ public class EditorSideMenu {
 
     public void act(float delta) {
         stage.act(delta);
-        syncWithController();
+        if (menuVisible) {
+            syncWithController();
+        }
     }
 
     public void draw() {
-        stage.draw();
+        if (menuVisible) {
+            stage.draw();
+        }
     }
 
     public void resize(int width, int height) {
@@ -306,6 +312,26 @@ public class EditorSideMenu {
 
     public Stage getStage() {
         return stage;
+    }
+
+    public boolean isMenuVisible() {
+        return menuVisible;
+    }
+
+    public void toggleVisibility() {
+        setMenuVisible(!menuVisible);
+    }
+
+    public void setMenuVisible(boolean menuVisible) {
+        this.menuVisible = menuVisible;
+        rootTable.setVisible(menuVisible);
+        rootTable.setTouchable(menuVisible ? com.badlogic.gdx.scenes.scene2d.Touchable.enabled
+            : com.badlogic.gdx.scenes.scene2d.Touchable.disabled);
+        if (!menuVisible) {
+            stage.unfocusAll();
+        } else {
+            syncWithController();
+        }
     }
 
     private void syncWithController() {
