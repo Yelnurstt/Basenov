@@ -19,11 +19,11 @@ public class Main extends Game {
     }
 
     public void showGame() {
-        setScreen(new GameScreen());
+        setScreen(new GameScreen(this));
     }
 
     public void showWorldEditor() {
-        setScreen(new LevelEditorDemoScreen());
+        setScreen(new LevelEditorDemoScreen(this));
     }
 
     public void exitGame() {
