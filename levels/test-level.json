@@ -1,0 +1,52 @@
+{
+id: test-level
+name: Test Level
+width: 40
+height: 30
+tileSize: 32
+blocks: []
+terrainPaths: [
+	{
+		id: main-terrain
+		points: {
+			class: java.util.Collections$UnmodifiableRandomAccessList
+			items: [
+				{
+					id: terrain-point-1
+					x: 80
+					y: 48
+				}
+				{
+					id: terrain-point-2
+					x: 208
+					y: 48
+				}
+				{
+					id: terrain-point-3
+					x: 400
+					y: 144
+				}
+				{
+					id: terrain-point-4
+					x: 592
+					y: 272
+				}
+				{
+					id: terrain-point-5
+					x: 816
+					y: 336
+				}
+				{
+					id: terrain-point-6
+					x: 1040
+					y: 336
+				}
+			]
+		}
+		curveType: LINEAR
+		material: editor-dirt
+		debugWidth: 4
+		friction: 1
+	}
+]
+}
