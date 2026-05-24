@@ -13,13 +13,17 @@ public class EraseBlockTool implements EditorToolStrategy {
     @Override
     public void onMouseDown(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY, int button) {
         if (button == Input.Buttons.LEFT) {
-            levelEditor.executeCommand(new EraseBlockCommand(levelEditor, gridX, gridY));
+            if (!levelEditor.deleteNonBlockAt(worldX, worldY)) {
+                levelEditor.executeCommand(new EraseBlockCommand(levelEditor, gridX, gridY));
+            }
         }
     }
 
     @Override
     public void onMouseDrag(LevelEditor levelEditor, int gridX, int gridY, float worldX, float worldY) {
-        levelEditor.executeCommand(new EraseBlockCommand(levelEditor, gridX, gridY));
+        if (!levelEditor.deleteNonBlockAt(worldX, worldY)) {
+            levelEditor.executeCommand(new EraseBlockCommand(levelEditor, gridX, gridY));
+        }
     }
 
     @Override

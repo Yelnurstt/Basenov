@@ -409,6 +409,54 @@ public class LevelEditor implements EditorToolController {
         return true;
     }
 
+    public boolean deleteNonBlockAt(float worldX, float worldY) {
+        WorldBlockData block = getActiveBlock();
+        if (block == null) {
+            return false;
+        }
+
+        GateData gate = findGateAt(worldX, worldY);
+        if (gate != null) {
+            block.gates.remove(gate);
+            if (gate.id != null && gate.id.equals(selectedGateId)) {
+                selectedGateId = null;
+            }
+            validateWorld();
+            updateStatus("Deleted gate " + gate.id);
+            return true;
+        }
+
+        SpawnPointData spawnPoint = findSpawnPointNear(worldX, worldY);
+        if (spawnPoint != null) {
+            block.spawnPoints.remove(spawnPoint);
+            if (spawnPoint.id != null && spawnPoint.id.equals(selectedSpawnPointId)) {
+                selectedSpawnPointId = null;
+            }
+            validateWorld();
+            updateStatus("Deleted spawn point " + spawnPoint.id);
+            return true;
+        }
+
+        WorldElementData marker = findMarkerNear(worldX, worldY);
+        if (marker != null) {
+            removeMarker(block, marker);
+            validateWorld();
+            updateStatus("Deleted " + marker.type + " " + marker.id);
+            return true;
+        }
+
+        TerrainPoint terrainPoint = findTerrainPointNear(worldX, worldY);
+        if (terrainPoint != null) {
+            boolean removed = replacePrimaryTerrainPath(buildPrimaryTerrainPathWithRemovedPoint(terrainPoint.getId()));
+            if (removed && terrainPoint.getId().equals(selectedTerrainPointId)) {
+                selectedTerrainPointId = null;
+            }
+            return removed;
+        }
+
+        return false;
+    }
+
     public boolean saveLevelToDefaultLocation() {
         FileHandle localFile = Gdx.files.local(DEFAULT_LEVEL_PATH);
         worldSerializer.save(snapshotWorldData(), localFile);
@@ -955,6 +1003,50 @@ public class LevelEditor implements EditorToolController {
             }
         }
         return null;
+    }
+
+    private WorldElementData findMarkerNear(float worldX, float worldY) {
+        WorldBlockData block = getActiveBlock();
+        if (block == null) {
+            return null;
+        }
+        Vector2 target = new Vector2(worldX, worldY);
+        WorldElementData closest = null;
+        float closestDistance = Float.MAX_VALUE;
+        closest = findClosestMarker(target, block.objects, closest, closestDistance);
+        closestDistance = closest == null ? Float.MAX_VALUE : target.dst(closest.x, closest.y);
+        closest = findClosestMarker(target, block.enemies, closest, closestDistance);
+        closestDistance = closest == null ? Float.MAX_VALUE : target.dst(closest.x, closest.y);
+        closest = findClosestMarker(target, block.rewards, closest, closestDistance);
+        closestDistance = closest == null ? Float.MAX_VALUE : target.dst(closest.x, closest.y);
+        return findClosestMarker(target, block.triggers, closest, closestDistance);
+    }
+
+    private WorldElementData findClosestMarker(Vector2 target, List<WorldElementData> markers,
+                                               WorldElementData currentClosest, float currentDistance) {
+        WorldElementData closest = currentClosest;
+        float closestDistance = currentDistance;
+        for (WorldElementData marker : markers) {
+            float distance = target.dst(marker.x, marker.y);
+            if (distance <= WORLD_ELEMENT_PICK_RADIUS && distance < closestDistance) {
+                closest = marker;
+                closestDistance = distance;
+            }
+        }
+        return closest;
+    }
+
+    private void removeMarker(WorldBlockData block, WorldElementData marker) {
+        if (block.objects.remove(marker)) {
+            return;
+        }
+        if (block.enemies.remove(marker)) {
+            return;
+        }
+        if (block.rewards.remove(marker)) {
+            return;
+        }
+        block.triggers.remove(marker);
     }
 
     private String findNextTargetBlockId(String sourceBlockId) {

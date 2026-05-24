@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -88,15 +89,42 @@ public class EditorSideMenu {
         rootTable.align(Align.left | Align.top);
         stage.addActor(rootTable);
 
-        Table panel = new Table();
-        panel.setBackground(skin.newDrawable("white", new Color(0.1f, 0.15f, 0.2f, 0.88f)));
-        panel.pad(10f);
-        panel.top();
+        Table frame = new Table();
+        frame.setBackground(skin.newDrawable("white", new Color(0.07f, 0.11f, 0.15f, 0.96f)));
+        frame.pad(10f);
+        frame.top();
+
+        Table header = new Table();
+        header.setBackground(skin.newDrawable("white", new Color(0.12f, 0.18f, 0.24f, 1f)));
+        header.pad(8f, 10f, 8f, 10f);
 
         Label titleLabel = new Label("World Editor", skin, "subtitle");
-        titleLabel.setAlignment(Align.center);
-        panel.add(titleLabel).expandX().fillX().padBottom(12f).row();
+        titleLabel.setAlignment(Align.left);
+        Label subtitleLabel = new Label("Blocks, gates, spawns and world flow", skin);
+        subtitleLabel.setColor(new Color(0.75f, 0.84f, 0.92f, 1f));
+        subtitleLabel.setFontScale(0.9f);
 
+        Table titleStack = new Table();
+        titleStack.add(titleLabel).left().row();
+        titleStack.add(subtitleLabel).left().padTop(2f);
+
+        TextButton closeButton = new TextButton("Hide [F3]", skin);
+        closeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                setMenuVisible(false);
+            }
+        });
+
+        header.add(titleStack).expandX().fillX().left().padRight(8f);
+        header.add(closeButton).width(96f).right();
+        frame.add(header).expandX().fillX().padBottom(8f).row();
+
+        Table content = new Table();
+        content.top();
+
+        Table toolPanel = createSection("Tools");
+        int column = 0;
         for (ToolButtonData data : toolDataList) {
             String buttonText = data.label + (data.hotkey != null ? " [" + data.hotkey + "]" : "");
             TextButton button = new TextButton(buttonText, skin, "toggle");
@@ -116,45 +144,57 @@ public class EditorSideMenu {
                 }
             });
             buttonGroup.add(button);
-            panel.add(button).fillX().height(32f).padBottom(4f).row();
+            toolPanel.add(button).width(126f).height(34f).pad(0f, column == 0 ? 0f : 4f, 6f, column == 0 ? 4f : 0f);
+            column++;
+            if (column == 2) {
+                toolPanel.row();
+                column = 0;
+            }
         }
+        if (column != 0) {
+            toolPanel.row();
+        }
+        content.add(toolPanel).expandX().fillX().padBottom(8f).row();
 
-        panel.add(buildBlockPanel()).expandX().fillX().padTop(10f).row();
-        panel.add(buildGatePanel()).expandX().fillX().padTop(10f).row();
+        content.add(buildBlockPanel()).expandX().fillX().padBottom(8f).row();
+        content.add(buildGatePanel()).expandX().fillX().padBottom(8f).row();
 
-        Table infoTable = new Table();
-        infoTable.setBackground(skin.newDrawable("white", new Color(0.05f, 0.05f, 0.1f, 0.85f)));
-        infoTable.pad(8f);
+        Table infoTable = createSection("Session");
         modeLabel = new Label("Mode: -", skin);
         toolLabel = new Label("Tool: -", skin);
         hintLabel = new Label("Hint: -", skin);
         hintLabel.setWrap(true);
         validationLabel = new Label("Validation: -", skin);
         validationLabel.setWrap(true);
+        Label footerHint = new Label("F3 hides the menu. F1/F2 switch runtime and editor.", skin);
+        footerHint.setWrap(true);
+        footerHint.setColor(new Color(0.73f, 0.82f, 0.9f, 1f));
 
         infoTable.add(modeLabel).align(Align.left).row();
         infoTable.add(toolLabel).align(Align.left).row();
-        infoTable.add(hintLabel).align(Align.left).width(220f).padTop(8f).row();
-        infoTable.add(validationLabel).align(Align.left).width(220f).padTop(8f).row();
-        panel.add(infoTable).expand().bottom().fillX().padTop(10f);
+        infoTable.add(hintLabel).align(Align.left).width(234f).padTop(8f).row();
+        infoTable.add(validationLabel).align(Align.left).width(234f).padTop(8f).row();
+        infoTable.add(footerHint).align(Align.left).width(234f).padTop(10f).row();
+        content.add(infoTable).expandX().fillX().row();
 
-        rootTable.add(panel).width(260f).expandY().fillY();
+        ScrollPane scrollPane = new ScrollPane(content, skin);
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+        frame.add(scrollPane).width(300f).expand().fill().row();
 
-        blockSelect = (SelectBox<String>) panel.findActor("blockSelect");
-        blockIdField = (TextField) panel.findActor("blockIdField");
-        blockNameField = (TextField) panel.findActor("blockNameField");
-        blockWidthField = (TextField) panel.findActor("blockWidthField");
-        blockHeightField = (TextField) panel.findActor("blockHeightField");
-        selectedGateLabel = (Label) panel.findActor("selectedGateLabel");
-        selectedSpawnLabel = (Label) panel.findActor("selectedSpawnLabel");
+        rootTable.add(frame).width(320f).expandY().fillY().pad(10f);
+
+        blockSelect = (SelectBox<String>) content.findActor("blockSelect");
+        blockIdField = (TextField) content.findActor("blockIdField");
+        blockNameField = (TextField) content.findActor("blockNameField");
+        blockWidthField = (TextField) content.findActor("blockWidthField");
+        blockHeightField = (TextField) content.findActor("blockHeightField");
+        selectedGateLabel = (Label) content.findActor("selectedGateLabel");
+        selectedSpawnLabel = (Label) content.findActor("selectedSpawnLabel");
     }
 
     private Table buildBlockPanel() {
-        Table panel = new Table();
-        panel.setBackground(skin.newDrawable("white", new Color(0.05f, 0.08f, 0.12f, 0.95f)));
-        panel.pad(8f);
-
-        panel.add(new Label("Blocks", skin)).left().padBottom(6f).row();
+        Table panel = createSection("Active Block");
 
         SelectBox<String> selectBox = new SelectBox<>(skin);
         selectBox.setName("blockSelect");
@@ -167,17 +207,20 @@ public class EditorSideMenu {
                 }
             }
         });
-        panel.add(selectBox).expandX().fillX().padBottom(6f).row();
+        panel.add(createFieldLabel("Selected block")).left().padBottom(4f).row();
+        panel.add(selectBox).expandX().fillX().padBottom(8f).row();
 
         TextField idField = new TextField("", skin);
         idField.setMessageText("block-id");
         idField.setName("blockIdField");
+        panel.add(createFieldLabel("Block id")).left().padBottom(3f).row();
         panel.add(idField).expandX().fillX().padBottom(4f).row();
 
         TextField nameField = new TextField("", skin);
         nameField.setMessageText("Block name");
         nameField.setName("blockNameField");
-        panel.add(nameField).expandX().fillX().padBottom(4f).row();
+        panel.add(createFieldLabel("Display name")).left().padBottom(3f).row();
+        panel.add(nameField).expandX().fillX().padBottom(6f).row();
 
         Table sizeTable = new Table();
         TextField widthField = new TextField("", skin);
@@ -186,8 +229,9 @@ public class EditorSideMenu {
         TextField heightField = new TextField("", skin);
         heightField.setName("blockHeightField");
         heightField.setMessageText("height");
-        sizeTable.add(widthField).width(104f).padRight(4f);
-        sizeTable.add(heightField).width(104f);
+        sizeTable.add(widthField).width(114f).padRight(6f);
+        sizeTable.add(heightField).width(114f);
+        panel.add(createFieldLabel("Block size")).left().padBottom(3f).row();
         panel.add(sizeTable).left().padBottom(6f).row();
 
         Table buttonTable = new Table();
@@ -207,28 +251,27 @@ public class EditorSideMenu {
                     parseInt(widthField.getText(), 20), parseInt(heightField.getText(), 15));
             }
         });
-        buttonTable.add(createButton).width(104f).padRight(4f);
-        buttonTable.add(applyButton).width(104f);
+        buttonTable.add(createButton).width(114f).padRight(6f);
+        buttonTable.add(applyButton).width(114f);
         panel.add(buttonTable).left();
 
         return panel;
     }
 
     private Table buildGatePanel() {
-        Table panel = new Table();
-        panel.setBackground(skin.newDrawable("white", new Color(0.05f, 0.08f, 0.12f, 0.95f)));
-        panel.pad(8f);
-        panel.add(new Label("Gate Debug", skin)).left().padBottom(6f).row();
+        Table panel = createSection("Gate Setup");
 
         Label gateLabel = new Label("Gate: none", skin);
         gateLabel.setName("selectedGateLabel");
         gateLabel.setWrap(true);
-        panel.add(gateLabel).width(220f).left().padBottom(4f).row();
+        panel.add(createFieldLabel("Selected gate")).left().padBottom(3f).row();
+        panel.add(gateLabel).width(234f).left().padBottom(6f).row();
 
         Label spawnLabel = new Label("Spawn: none", skin);
         spawnLabel.setName("selectedSpawnLabel");
         spawnLabel.setWrap(true);
-        panel.add(spawnLabel).width(220f).left().padBottom(6f).row();
+        panel.add(createFieldLabel("Selected spawn")).left().padBottom(3f).row();
+        panel.add(spawnLabel).width(234f).left().padBottom(8f).row();
 
         Table row1 = new Table();
         TextButton typeButton = new TextButton("Toggle Type", skin);
@@ -245,8 +288,8 @@ public class EditorSideMenu {
                 levelEditor.cycleSelectedGateState();
             }
         });
-        row1.add(typeButton).width(104f).padRight(4f);
-        row1.add(stateButton).width(104f);
+        row1.add(typeButton).width(114f).padRight(6f);
+        row1.add(stateButton).width(114f);
         panel.add(row1).left().padBottom(4f).row();
 
         Table row2 = new Table();
@@ -264,8 +307,8 @@ public class EditorSideMenu {
                 levelEditor.cycleSelectedGateTargetSpawnPoint();
             }
         });
-        row2.add(targetButton).width(104f).padRight(4f);
-        row2.add(spawnButton).width(104f);
+        row2.add(targetButton).width(114f).padRight(6f);
+        row2.add(spawnButton).width(114f);
         panel.add(row2).left();
 
         return panel;
@@ -413,5 +456,22 @@ public class EditorSideMenu {
         } catch (Exception exception) {
             return fallback;
         }
+    }
+
+    private Table createSection(String title) {
+        Table panel = new Table();
+        panel.setBackground(skin.newDrawable("white", new Color(0.10f, 0.14f, 0.19f, 0.98f)));
+        panel.pad(10f);
+
+        Label titleLabel = new Label(title, skin);
+        titleLabel.setColor(new Color(0.96f, 0.98f, 1f, 1f));
+        panel.add(titleLabel).left().padBottom(8f).row();
+        return panel;
+    }
+
+    private Label createFieldLabel(String text) {
+        Label label = new Label(text, skin);
+        label.setColor(new Color(0.72f, 0.82f, 0.9f, 1f));
+        return label;
     }
 }
