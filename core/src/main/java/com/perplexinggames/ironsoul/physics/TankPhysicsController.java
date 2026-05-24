@@ -11,17 +11,16 @@ public class TankPhysicsController {
     public TankPhysicsState state = TankPhysicsState.AIRBORNE;
 
     public float acceleration = 600f;
-    public float maxSpeed = 250f;
+    public float maxSpeed = 300f;
     public float friction = 0.85f;
     public float slopeResistance = 300f;
     public float gravity = -900f;
-    public float groundSnapStrength = 40f; // жерге жабысып тұру
+    public float groundSnapStrength = 40f;
     public float rotationSmoothing = 10f;
 
     public float trackWidth = 56f;
-    // ФИКС: Поднимаем старт луча выше и делаем его длиннее, чтобы не промахивался на склонах
     public float probeHeightOffset = 40f;
-    public float probeLength = 120f; // лучи длинее чтоб танк не летал
+    public float probeLength = 120f;
 
     private final TerrainCollisionProvider terrain;
     public final TerrainContactInfo leftContact = new TerrainContactInfo();
@@ -34,14 +33,46 @@ public class TankPhysicsController {
     }
 
     public void update(float delta, float inputAxis) {
+        // === 1. ДИНАМИЧЕСКИЕ ЩУПЫ (Инерция) ===
+        float speedRatio = Math.abs(velocity.x) / maxSpeed;
+        speedRatio = MathUtils.clamp(speedRatio, 0f, 1f);
+        float speedFactor = speedRatio * speedRatio * speedRatio;
+
+        float restingDist = probeHeightOffset;
+        float minProbe = restingDist + 15f;
+        float maxProbe = probeLength;
+
+        float currentProbeDist = MathUtils.lerp(maxProbe, minProbe, speedFactor);
+
         float probeY = y + probeHeightOffset;
 
-        terrain.getContactInfo(x - trackWidth / 2f, probeY, probeLength, leftContact);
-        terrain.getContactInfo(x + trackWidth / 2f, probeY, probeLength, rightContact);
+        terrain.getContactInfo(x - trackWidth / 2f, probeY, currentProbeDist, leftContact);
+        terrain.getContactInfo(x + trackWidth / 2f, probeY, currentProbeDist, rightContact);
+
+        boolean leftGrounded = leftContact.hasContact;
+        boolean rightGrounded = rightContact.hasContact;
+
+        // === 2. РАННИЙ ОТРЫВ (Трамплин для дальнего полета!) ===
+        if (state == TankPhysicsState.GROUNDED && speedRatio > 0.4f && (leftGrounded != rightGrounded)) {
+            boolean forcedDetachment = false;
+
+            if (velocity.x > 0f && leftGrounded) {
+                leftGrounded = false;
+                forcedDetachment = true;
+            } else if (velocity.x < 0f && rightGrounded) {
+                rightGrounded = false;
+                forcedDetachment = true;
+            }
+
+            if (forcedDetachment) {
+                velocity.y += 150f * speedRatio;
+                velocity.x *= 1f;
+            }
+        }
 
         int contacts = 0;
-        if (leftContact.hasContact) contacts++;
-        if (rightContact.hasContact) contacts++;
+        if (leftGrounded) contacts++;
+        if (rightGrounded) contacts++;
 
         if (contacts > 0) {
             state = TankPhysicsState.GROUNDED;
@@ -49,18 +80,15 @@ public class TankPhysicsController {
             float targetRot = 0f;
             float targetY = y;
 
-            // ФИКС: Правильно считаем Y центра танка в зависимости от того, сколько гусениц касаются земли
             if (contacts == 2) {
                 targetRot = new Vector2(rightContact.point.x - leftContact.point.x,
                     rightContact.point.y - leftContact.point.y).angleDeg();
                 targetY = (leftContact.point.y + rightContact.point.y) / 2f;
-            } else if (leftContact.hasContact) {
+            } else if (leftGrounded) {
                 targetRot = leftContact.angle;
-                // Если касается только зад, центр танка ВЫШЕ гусеницы с учетом угла
                 targetY = leftContact.point.y + (trackWidth / 2f) * MathUtils.sinDeg(rotation);
-            } else if (rightContact.hasContact) {
+            } else if (rightGrounded) {
                 targetRot = rightContact.angle;
-                // Если касается только перед, центр танка НИЖЕ гусеницы с учетом угла
                 targetY = rightContact.point.y - (trackWidth / 2f) * MathUtils.sinDeg(rotation);
             }
 
@@ -81,7 +109,7 @@ public class TankPhysicsController {
 
             if (velocity.len() > maxSpeed) velocity.nor().scl(maxSpeed);
 
-            x += velocity.x * delta;
+            // X БОЛЬШЕ НЕ ПРИБАВЛЯЕМ ЗДЕСЬ
 
         } else {
             state = TankPhysicsState.AIRBORNE;
@@ -91,8 +119,23 @@ public class TankPhysicsController {
 
             rotation = MathUtils.lerpAngleDeg(rotation, 0, (rotationSmoothing / 2f) * delta);
 
-            x += velocity.x * delta;
+            // X БОЛЬШЕ НЕ ПРИБАВЛЯЕМ ЗДЕСЬ, только Y
             y += velocity.y * delta;
+        }
+
+        // ==========================================
+        // 3. РАДАР СТЕН (Защита от прохождения насквозь)
+        // ==========================================
+        float nextX = x + velocity.x * delta;
+        float bodyHalfWidth = trackWidth / 2f + 5f; // Выдвигаем радар за габариты гусениц
+        float checkOffset = Math.signum(velocity.x) * bodyHalfWidth;
+        float maxStepHeight = 15f; // Максимальная высота, которую танк может переехать
+
+        // Проверяем стены по курсу движения
+        if (velocity.x != 0 && terrain.hasBlockingWall(x, nextX + checkOffset, y, maxStepHeight)) {
+            velocity.x = 0f; // Упираемся в стену, гасим скорость
+        } else {
+            x = nextX; // Путь свободен, едем!
         }
     }
 }

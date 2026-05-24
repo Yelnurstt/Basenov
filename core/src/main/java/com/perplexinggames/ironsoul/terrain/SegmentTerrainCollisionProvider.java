@@ -26,13 +26,21 @@ public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider
 
         for (TerrainCollisionData data : collisionData) {
             for (TerrainSegment segment : data.getSegments()) {
+                // ФИКС: Используем getP1() и getP2() вместо прямых переменных!
+                // Игнорируем строго вертикальные стены при поиске пола
+                if (Math.abs(segment.getP1().x - segment.getP2().x) < 0.1f) {
+                    continue;
+                }
+
                 if (!segment.containsX(position.x)) {
                     continue;
                 }
 
                 float surfaceY = segment.getYAtX(position.x);
                 float distanceToSurface = position.y - surfaceY;
-                if (distanceToSurface < -15f || distanceToSurface > probeDistance + 15f) {
+
+                // ДОПУСК: -80f чтобы лучи находили гору, даже если танк врезался в неё
+                if (distanceToSurface < -80f || distanceToSurface > probeDistance + 15f) {
                     continue;
                 }
 
@@ -58,5 +66,31 @@ public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider
             bestData.getMaterial(),
             bestData.getFriction()
         );
+    }
+
+    // ЛОГИКА РАДАРА СТЕН ДЛЯ СЕГМЕНТОВ
+    @Override
+    public boolean hasBlockingWall(float startX, float endX, float currentY, float maxStepHeight) {
+        float minX = Math.min(startX, endX);
+        float maxX = Math.max(startX, endX);
+
+        for (TerrainCollisionData data : collisionData) {
+            for (TerrainSegment segment : data.getSegments()) {
+                if (Math.abs(segment.getP1().x - segment.getP2().x) < 0.1f) {
+                    float wallX = segment.getP1().x;
+
+                    // Простая и надежная проверка, которая работает в обе стороны!
+                    if (wallX >= minX && wallX <= maxX) {
+                        float minY = Math.min(segment.getP1().y, segment.getP2().y);
+                        float maxY = Math.max(segment.getP1().y, segment.getP2().y);
+
+                        if (maxY > currentY + maxStepHeight && currentY >= minY - 5f) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

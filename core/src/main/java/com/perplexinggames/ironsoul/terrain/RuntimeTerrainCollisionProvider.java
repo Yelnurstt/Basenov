@@ -29,4 +29,19 @@ public class RuntimeTerrainCollisionProvider implements TerrainCollisionProvider
 
         return bestContact;
     }
+
+    // РЕАЛИЗАЦИЯ РАДАРА СТЕН ДЛЯ УРОВНЯ
+    @Override
+    public boolean hasBlockingWall(float startX, float endX, float currentY, float maxStepHeight) {
+        for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
+            TerrainCollisionData collisionData = collisionBuilder.build(terrainPath);
+            SegmentTerrainCollisionProvider provider = new SegmentTerrainCollisionProvider(java.util.Collections.singletonList(collisionData));
+
+            if (provider.hasBlockingWall(startX, endX, currentY, maxStepHeight)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
