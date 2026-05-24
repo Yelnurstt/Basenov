@@ -5,10 +5,12 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.perplexinggames.ironsoul.physics.TankPhysicsController;
+import com.perplexinggames.ironsoul.tank.controller.FacingDirection;
 import com.perplexinggames.ironsoul.terrain.TerrainCollisionProvider;
 
 public class PhysicsTank {
@@ -153,5 +155,38 @@ public class PhysicsTank {
         hullTex.dispose();
         tracksTex.dispose();
         turretTex.dispose();
+    }
+
+    public Rectangle getBounds() {
+        float height = getVisualHeight();
+        return new Rectangle(physics.x - width * 0.5f, physics.y, width, height);
+    }
+
+    public void setWorldPosition(float x, float y) {
+        physics.x = x;
+        physics.y = y;
+        physics.velocity.setZero();
+    }
+
+    public void setFacingDirection(FacingDirection direction) {
+        if (direction == null) {
+            return;
+        }
+        facingRight = direction == FacingDirection.RIGHT;
+    }
+
+    public float getBodyWidth() {
+        return width;
+    }
+
+    public float getBodyHeight() {
+        return getVisualHeight();
+    }
+
+    private float getVisualHeight() {
+        float drawScale = width / hullTex.getWidth();
+        float tracksHeight = tracksTex.getHeight() * drawScale;
+        float hullHeight = hullTex.getHeight() * drawScale;
+        return tracksHeight + hullHeight;
     }
 }

@@ -1,7 +1,9 @@
 package com.perplexinggames.ironsoul.level;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.world.WorldBlockData;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -55,16 +57,57 @@ public class RuntimeLevel {
 
     public LevelData toLevelData() {
         LevelData levelData = new LevelData(id, name, width, height, tileSize);
+        levelData.blocks.addAll(copyBlocks());
+        levelData.terrainPaths.addAll(copyTerrainPaths());
+        return levelData;
+    }
+
+    public void apply(WorldBlockData worldBlockData, int tileSize) {
+        if (worldBlockData == null) {
+            return;
+        }
+
+        LevelData levelData = new LevelData(
+            worldBlockData.id,
+            worldBlockData.name,
+            worldBlockData.width,
+            worldBlockData.height,
+            tileSize
+        );
+        levelData.blocks.addAll(worldBlockData.tiles);
+        levelData.terrainPaths.addAll(worldBlockData.terrain);
+        apply(levelData);
+    }
+
+    public List<BlockData> copyBlocks() {
         List<BlockData> blockCopies = new ArrayList<>(blocks.size);
         for (BlockData block : blocks.values()) {
             blockCopies.add(block.copy());
         }
         blockCopies.sort(Comparator.comparingInt((BlockData block) -> block.y).thenComparingInt(block -> block.x));
-        levelData.blocks.addAll(blockCopies);
+        return blockCopies;
+    }
+
+    public List<TerrainPath> copyTerrainPaths() {
+        List<TerrainPath> copies = new ArrayList<>(terrainPaths.size());
         for (TerrainPath terrainPath : terrainPaths) {
-            levelData.terrainPaths.add(terrainPath.copy());
+            copies.add(terrainPath.copy());
         }
-        return levelData;
+        return copies;
+    }
+
+    public ResizeResult resize(int newWidth, int newHeight) {
+        ResizeResult result = new ResizeResult();
+        if (newWidth <= 0 || newHeight <= 0) {
+            result.addWarning("Block size must be greater than zero.");
+            return result;
+        }
+
+        width = newWidth;
+        height = newHeight;
+        clampBlocks(result);
+        clampTerrain(result);
+        return result;
     }
 
     public boolean setBlock(int x, int y, BlockType type) {
@@ -261,5 +304,72 @@ public class RuntimeLevel {
 
     private long pack(int x, int y) {
         return ((long) x << 32) | (y & 0xffffffffL);
+    }
+
+    private void clampBlocks(ResizeResult result) {
+        LongMap<BlockData> clampedBlocks = new LongMap<>();
+        int clampedCount = 0;
+        for (BlockData block : blocks.values()) {
+            int clampedX = MathUtils.clamp(block.x, 0, width - 1);
+            int clampedY = MathUtils.clamp(block.y, 0, height - 1);
+            if (clampedX != block.x || clampedY != block.y) {
+                clampedCount++;
+            }
+            clampedBlocks.put(pack(clampedX, clampedY), new BlockData(clampedX, clampedY, block.type));
+        }
+        blocks.clear();
+        for (BlockData block : clampedBlocks.values()) {
+            blocks.put(pack(block.x, block.y), block);
+        }
+        if (clampedCount > 0) {
+            result.addWarning("Clamped " + clampedCount + " tile blocks to the resized block bounds.");
+        }
+    }
+
+    private void clampTerrain(ResizeResult result) {
+        float maxX = getPixelWidth();
+        float maxY = getPixelHeight();
+        int clampedPoints = 0;
+
+        for (int i = 0; i < terrainPaths.size(); i++) {
+            TerrainPath terrainPath = terrainPaths.get(i);
+            List<TerrainPoint> clamped = new ArrayList<>(terrainPath.getPoints().size());
+            for (TerrainPoint point : terrainPath.getPoints()) {
+                float clampedX = MathUtils.clamp(point.getX(), 0f, maxX);
+                float clampedY = MathUtils.clamp(point.getY(), 0f, maxY);
+                if (Float.compare(clampedX, point.getX()) != 0 || Float.compare(clampedY, point.getY()) != 0) {
+                    clampedPoints++;
+                }
+                clamped.add(new TerrainPoint(point.getId(), clampedX, clampedY));
+            }
+            terrainPaths.set(i, new TerrainPath(
+                terrainPath.getId(),
+                clamped,
+                terrainPath.getCurveType(),
+                terrainPath.getMaterial(),
+                terrainPath.getDebugWidth(),
+                terrainPath.getFriction()
+            ));
+        }
+
+        if (clampedPoints > 0) {
+            result.addWarning("Clamped " + clampedPoints + " terrain points to the resized block bounds.");
+        }
+    }
+
+    public static class ResizeResult {
+        private final List<String> warnings = new ArrayList<>();
+
+        public void addWarning(String warning) {
+            warnings.add(warning);
+        }
+
+        public boolean hasWarnings() {
+            return !warnings.isEmpty();
+        }
+
+        public List<String> getWarnings() {
+            return Collections.unmodifiableList(warnings);
+        }
     }
 }

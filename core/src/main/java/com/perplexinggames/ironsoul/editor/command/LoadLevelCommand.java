@@ -1,12 +1,12 @@
 package com.perplexinggames.ironsoul.editor.command;
 
 import com.perplexinggames.ironsoul.editor.LevelEditor;
-import com.perplexinggames.ironsoul.level.LevelData;
+import com.perplexinggames.ironsoul.world.WorldData;
 
 public class LoadLevelCommand implements EditorCommand {
     private final LevelEditor levelEditor;
-    private LevelData previousLevelData;
-    private LevelData loadedLevelData;
+    private WorldData previousWorldData;
+    private WorldData loadedWorldData;
     private String sourceDescription;
     private boolean emptyFallback;
     private boolean changedState;
@@ -22,24 +22,24 @@ public class LoadLevelCommand implements EditorCommand {
 
     @Override
     public void execute() {
-        previousLevelData = levelEditor.snapshotLevelData();
+        previousWorldData = levelEditor.snapshotWorldData();
 
-        if (loadedLevelData == null) {
-            loadedLevelData = levelEditor.readLevelDataFromDefaultLocation();
+        if (loadedWorldData == null) {
+            loadedWorldData = levelEditor.readWorldDataFromDefaultLocation();
             sourceDescription = levelEditor.getLastLoadSourceDescription();
             emptyFallback = levelEditor.wasLastLoadEmptyFallback();
         }
 
-        levelEditor.applyLoadedLevel(loadedLevelData.copy(), sourceDescription, emptyFallback);
+        levelEditor.applyLoadedWorld(loadedWorldData.copy(), sourceDescription, emptyFallback);
         changedState = true;
     }
 
     @Override
     public void undo() {
-        if (!changedState || previousLevelData == null) {
+        if (!changedState || previousWorldData == null) {
             return;
         }
-        levelEditor.applyLoadedLevel(previousLevelData.copy(), "undo snapshot", false);
+        levelEditor.applyLoadedWorld(previousWorldData.copy(), "undo snapshot", false);
     }
 
     @Override

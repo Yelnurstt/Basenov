@@ -11,9 +11,14 @@ import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.perplexinggames.ironsoul.editor.command.LoadLevelCommand;
 import com.perplexinggames.ironsoul.editor.command.SaveLevelCommand;
 import com.perplexinggames.ironsoul.editor.tool.EraseBlockTool;
+import com.perplexinggames.ironsoul.editor.tool.GateTool;
 import com.perplexinggames.ironsoul.editor.tool.PlaceBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.SelectBlockTool;
+import com.perplexinggames.ironsoul.editor.tool.SpawnPointTool;
 import com.perplexinggames.ironsoul.editor.tool.TerrainPointTool;
+import com.perplexinggames.ironsoul.editor.tool.WorldMarkerTool;
+
+import java.util.List;
 
 public class EditorInputAdapter extends InputAdapter {
     private static final float CAMERA_PAN_SPEED = 500f;
@@ -69,8 +74,41 @@ public class EditorInputAdapter extends InputAdapter {
             case Input.Keys.NUM_4:
                 levelEditor.setTool(new TerrainPointTool());
                 return true;
+            case Input.Keys.NUM_5:
+                levelEditor.setTool(new GateTool());
+                return true;
+            case Input.Keys.NUM_6:
+                levelEditor.setTool(new SpawnPointTool());
+                return true;
+            case Input.Keys.NUM_7:
+                levelEditor.setTool(new WorldMarkerTool("OBJECT", LevelEditor.MarkerLayer.OBJECT));
+                return true;
+            case Input.Keys.NUM_8:
+                levelEditor.setTool(new WorldMarkerTool("ENEMY", LevelEditor.MarkerLayer.ENEMY));
+                return true;
+            case Input.Keys.NUM_9:
+                levelEditor.setTool(new WorldMarkerTool("REWARD", LevelEditor.MarkerLayer.REWARD));
+                return true;
+            case Input.Keys.NUM_0:
+                levelEditor.setTool(new WorldMarkerTool("TRIGGER", LevelEditor.MarkerLayer.TRIGGER));
+                return true;
             case Input.Keys.G:
                 levelEditor.toggleTerrainSnapToGrid();
+                return true;
+            case Input.Keys.T:
+                levelEditor.cycleSelectedGateTransitionType();
+                return true;
+            case Input.Keys.Y:
+                levelEditor.cycleSelectedGateState();
+                return true;
+            case Input.Keys.U:
+                levelEditor.cycleSelectedGateTargetBlock();
+                return true;
+            case Input.Keys.I:
+                levelEditor.cycleSelectedGateTargetSpawnPoint();
+                return true;
+            case Input.Keys.TAB:
+                cycleBlocks();
                 return true;
             case Input.Keys.S:
                 levelEditor.executeCommand(new SaveLevelCommand(levelEditor));
@@ -189,5 +227,15 @@ public class EditorInputAdapter extends InputAdapter {
         Vector2 worldPosition = screenToWorld(screenX, screenY);
         int tileSize = levelEditor.getRuntimeLevel().getTileSize();
         return new GridPoint2((int) Math.floor(worldPosition.x / tileSize), (int) Math.floor(worldPosition.y / tileSize));
+    }
+
+    private void cycleBlocks() {
+        List<String> blockIds = levelEditor.getBlockIds();
+        if (blockIds.isEmpty()) {
+            return;
+        }
+        int currentIndex = Math.max(0, blockIds.indexOf(levelEditor.getActiveBlockId()));
+        String nextBlockId = blockIds.get((currentIndex + 1) % blockIds.size());
+        levelEditor.selectActiveBlock(nextBlockId);
     }
 }

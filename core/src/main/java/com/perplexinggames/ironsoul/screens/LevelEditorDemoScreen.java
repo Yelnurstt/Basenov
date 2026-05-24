@@ -1,6 +1,8 @@
 package com.perplexinggames.ironsoul.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -9,27 +11,33 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.perplexinggames.ironsoul.core.Main;
 import com.perplexinggames.ironsoul.editor.EditorInputAdapter;
 import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
+import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
 import com.perplexinggames.ironsoul.entities.PhysicsTank;
 import com.perplexinggames.ironsoul.level.BlockData;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.LevelRenderer;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
-import com.perplexinggames.ironsoul.level.serialization.JsonLevelSerializer;
-import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
-import com.perplexinggames.ironsoul.terrain.TerrainPath;
-import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
-import com.perplexinggames.ironsoul.core.Main;
-import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
-import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.world.GateData;
+import com.perplexinggames.ironsoul.world.WorldBlockData;
+import com.perplexinggames.ironsoul.world.WorldData;
+import com.perplexinggames.ironsoul.world.runtime.PhysicsTankRuntimeAdapter;
+import com.perplexinggames.ironsoul.world.runtime.WorldSpawnResolver;
+import com.perplexinggames.ironsoul.world.runtime.WorldStreamingService;
+import com.perplexinggames.ironsoul.world.runtime.WorldTransitionService;
+import com.perplexinggames.ironsoul.world.serialization.JsonWorldSerializer;
+import com.perplexinggames.ironsoul.world.serialization.WorldSerializer;
 
 public class LevelEditorDemoScreen implements Screen {
-    private Main game;
+    private final Main game;
+
     private SpriteBatch batch;
     private BitmapFont font;
     private OrthographicCamera worldCamera;
@@ -41,6 +49,8 @@ public class LevelEditorDemoScreen implements Screen {
     private PhysicsTank tank;
     private EditorSideMenu editorSideMenu;
     private InputMultiplexer inputMultiplexer;
+    private WorldStreamingService streamingService;
+    private WorldTransitionService transitionService;
 
     public LevelEditorDemoScreen(Main game) {
         this.game = game;
@@ -56,21 +66,25 @@ public class LevelEditorDemoScreen implements Screen {
         hudCamera = new OrthographicCamera();
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        LevelSerializer levelSerializer = new JsonLevelSerializer();
-        runtimeLevel = new RuntimeLevel(LevelEditor.createEmptyLevelData());
+        WorldSerializer worldSerializer = new JsonWorldSerializer();
+        runtimeLevel = new RuntimeLevel(new LevelData("bootstrap", "Bootstrap", 40, 30, 32));
         levelRenderer = new LevelRenderer();
-        levelEditor = new LevelEditor(runtimeLevel, levelSerializer);
+        levelEditor = new LevelEditor(runtimeLevel, worldSerializer);
 
-        LevelData initialLevelData = levelEditor.readLevelDataFromDefaultLocation();
-        levelEditor.applyLoadedLevel(initialLevelData, levelEditor.getLastLoadSourceDescription(),
+        WorldData initialWorld = levelEditor.readWorldDataFromDefaultLocation();
+        levelEditor.applyLoadedWorld(initialWorld, levelEditor.getLastLoadSourceDescription(),
             levelEditor.wasLastLoadEmptyFallback());
         levelEditor.clearHistory();
 
-        float tileSize = runtimeLevel.getTileSize();
-        tank = new PhysicsTank(tileSize * 2f, getInitialTankSpawnY(tileSize), new RuntimeTerrainCollisionProvider(runtimeLevel));
+        tank = new PhysicsTank(runtimeLevel.getTileSize() * 2f, getInitialTankSpawnY(runtimeLevel.getTileSize()),
+            new RuntimeTerrainCollisionProvider(runtimeLevel));
+        streamingService = new WorldStreamingService(levelEditor.getWorldData());
+        streamingService.setCurrentBlock(levelEditor.getActiveBlockId());
+        transitionService = new WorldTransitionService(levelEditor.getWorldData(), streamingService,
+            new PhysicsTankRuntimeAdapter(tank), blockId -> levelEditor.selectActiveBlock(blockId));
+        spawnTankAtActiveBlock();
 
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
-        
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
 
@@ -85,7 +99,7 @@ public class LevelEditorDemoScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             game.showMainMenu();
             return;
         }
@@ -94,16 +108,18 @@ public class LevelEditorDemoScreen implements Screen {
 
         ScreenUtils.clear(0.09f, 0.1f, 0.12f, 1f);
 
+        WorldBlockData activeBlock = levelEditor.getActiveBlock();
         if (levelEditor.getMode() == EditorMode.EDITOR) {
             levelRenderer.renderEditor(
                 runtimeLevel,
+                activeBlock,
                 worldCamera,
                 levelEditor.getHoveredCell(),
                 levelEditor.getSelectedCell(),
                 levelEditor.getSelectedTerrainPoint()
             );
         } else {
-            levelRenderer.renderGameplay(runtimeLevel, worldCamera);
+            levelRenderer.renderGameplay(runtimeLevel, activeBlock, worldCamera);
         }
 
         batch.setProjectionMatrix(worldCamera.combined);
@@ -177,10 +193,36 @@ public class LevelEditorDemoScreen implements Screen {
     }
 
     private void updateGameplay(float delta) {
+        synchronizeGameplayBlockSelection();
         tank.update(delta);
+        transitionService.update(levelEditor.getActiveBlock(), Gdx.input.isKeyJustPressed(Input.Keys.E));
         centerCameraOnTank();
         clampCameraToLevelBounds();
         worldCamera.update();
+    }
+
+    private void synchronizeGameplayBlockSelection() {
+        if (streamingService == null) {
+            return;
+        }
+        if (!levelEditor.getActiveBlockId().equals(streamingService.getCurrentBlock())) {
+            streamingService.setCurrentBlock(levelEditor.getActiveBlockId());
+            spawnTankAtActiveBlock();
+        }
+    }
+
+    private void spawnTankAtActiveBlock() {
+        WorldBlockData activeBlock = levelEditor.getActiveBlock();
+        if (activeBlock == null) {
+            return;
+        }
+        if (!activeBlock.spawnPoints.isEmpty()) {
+            transitionService.moveTankToSpawnPoint(
+                WorldSpawnResolver.resolveSafeSpawnPoint(activeBlock, activeBlock.spawnPoints.get(0), levelEditor.getWorldData().tileSize)
+            );
+        } else {
+            tank.setWorldPosition(runtimeLevel.getTileSize() * 2f, getInitialTankSpawnY(runtimeLevel.getTileSize()));
+        }
     }
 
     private void centerCameraOnTank() {
@@ -210,12 +252,25 @@ public class LevelEditorDemoScreen implements Screen {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
         font.draw(batch, buildOverlayText(), 12f, hudCamera.viewportHeight - 12f);
+        String interactionText = transitionService == null ? null : transitionService.getActiveInteractionText();
+        if (interactionText != null && !interactionText.isBlank()) {
+            font.draw(batch, interactionText, hudCamera.viewportWidth * 0.35f, 48f);
+        }
         batch.end();
     }
 
     private String buildOverlayText() {
+        WorldBlockData activeBlock = levelEditor.getActiveBlock();
         if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
-            return "MODE: GAMEPLAY\nF2: editor mode\nA/D or arrows: drive tank";
+            return new StringBuilder()
+                .append("MODE: GAMEPLAY\n")
+                .append("BLOCK: ").append(levelEditor.getActiveBlockId()).append('\n')
+                .append("LOADED: ").append(String.join(", ", streamingService.getLoadedBlocks())).append('\n')
+                .append("CONNECTED: ").append(String.join(", ", streamingService.getConnectedBlocks())).append('\n')
+                .append("ACTIVE GATE: ").append(formatGate(transitionService.getActiveGate())).append('\n')
+                .append("LAST TRANSITION: ").append(transitionService.getLastTransitionLog()).append('\n')
+                .append("F2: editor mode | E: interact gate")
+                .toString();
         }
 
         BlockData selectedBlock = levelEditor.getSelectedBlock();
@@ -225,18 +280,22 @@ public class LevelEditorDemoScreen implements Screen {
 
         return new StringBuilder()
             .append("MODE: EDITOR\n")
+            .append("ACTIVE BLOCK: ").append(activeBlock == null ? "none" : activeBlock.id).append(" ")
+            .append(activeBlock == null ? "" : "(" + activeBlock.width + "x" + activeBlock.height + ")").append('\n')
             .append("TOOL: ").append(levelEditor.getCurrentToolName()).append('\n')
-            .append("BLOCKS: ").append(runtimeLevel.getBlockCount()).append('\n')
+            .append("BLOCKS: ").append(levelEditor.getBlockIds().size()).append('\n')
+            .append("SOLID TILES: ").append(runtimeLevel.getBlockCount()).append('\n')
             .append("TERRAIN PATHS: ").append(runtimeLevel.getTerrainPathCount())
             .append(" | POINTS: ").append(runtimeLevel.getTerrainPointCount()).append('\n')
+            .append("GATES/SPAWNS: ").append(activeBlock == null ? "0/0" : activeBlock.gates.size() + "/" + activeBlock.spawnPoints.size()).append('\n')
             .append("TERRAIN SNAP: ").append(levelEditor.isTerrainSnapToGrid() ? "ON" : "OFF").append('\n')
             .append("HOVER: ").append(hoveredCell).append('\n')
-            .append("SELECTED: ").append(selectedCell).append('\n')
-            .append("TERRAIN SELECTED: ").append(formatTerrainPoint(levelEditor.getSelectedTerrainPoint())).append('\n')
+            .append("SELECTED TILE: ").append(selectedCell).append('\n')
+            .append("SELECTED GATE: ").append(formatGate(levelEditor.getSelectedGate())).append('\n')
+            .append("SELECTED SPAWN: ").append(levelEditor.getSelectedSpawnPoint() == null ? "none" : levelEditor.getSelectedSpawnPoint().id).append('\n')
+            .append("VALIDATION: ").append(levelEditor.getValidationSummary()).append('\n')
             .append("STATUS: ").append(levelEditor.getLastStatusMessage()).append('\n')
-            .append("CONTROLS: F1 gameplay | 1 place | 2 erase | 3 select | 4 terrain\n")
-            .append("Terrain: LMB add/drag point | RMB remove point | G snap toggle\n")
-            .append("S save | L load | Ctrl+Z undo | Ctrl+Y redo | Arrows move camera")
+            .append("1-0 tools | T/Y/U/I gate props | Tab cycle block | S save | L load")
             .toString();
     }
 
@@ -250,17 +309,17 @@ public class LevelEditorDemoScreen implements Screen {
         return "(" + cell.x + ", " + cell.y + ")";
     }
 
-    private String formatTerrainPoint(com.perplexinggames.ironsoul.terrain.TerrainPoint point) {
-        if (point == null) {
+    private String formatGate(GateData gate) {
+        if (gate == null) {
             return "none";
         }
-        return point.getId() + " @ (" + point.getX() + ", " + point.getY() + ")";
+        return gate.id + " -> " + gate.targetBlockId + "/" + gate.targetSpawnPointId + " [" + gate.transitionType + "]";
     }
 
     private float getInitialTankSpawnY(float tileSize) {
         float highestTerrainY = 0f;
         for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
-            for (TerrainPoint point : terrainPath.getPoints()) {
+            for (com.perplexinggames.ironsoul.terrain.TerrainPoint point : terrainPath.getPoints()) {
                 highestTerrainY = Math.max(highestTerrainY, point.getY());
             }
         }
@@ -268,6 +327,6 @@ public class LevelEditorDemoScreen implements Screen {
         float spawnMargin = tileSize * 4f;
         float minSpawnY = tileSize * 3f;
         float maxSpawnY = runtimeLevel.getPixelHeight() - tileSize * 2f;
-        return MathUtils.clamp(highestTerrainY + spawnMargin, minSpawnY, maxSpawnY);
+        return MathUtils.clamp(highestTerrainY + spawnMargin, minSpawnY, Math.max(minSpawnY, maxSpawnY));
     }
 }
