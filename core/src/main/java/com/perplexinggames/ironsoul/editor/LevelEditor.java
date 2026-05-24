@@ -48,6 +48,7 @@ public class LevelEditor {
     private String lastStatusMessage;
     private String lastLoadSourceDescription;
     private boolean lastLoadEmptyFallback;
+    private boolean terrainSnapToGrid;
     private int terrainPointSequence;
 
     public LevelEditor(RuntimeLevel runtimeLevel, LevelSerializer levelSerializer) {
@@ -58,6 +59,7 @@ public class LevelEditor {
         this.toolContext = new EditorToolContext(new PlaceBlockTool());
         this.mode = EditorMode.GAMEPLAY;
         this.lastStatusMessage = "Ready";
+        this.terrainSnapToGrid = false;
         registerDebugListeners();
         eventBus.post(new ToolChangedEvent(getCurrentToolName()));
     }
@@ -135,6 +137,15 @@ public class LevelEditor {
         return findTerrainPointById(selectedTerrainPointId);
     }
 
+    public boolean isTerrainSnapToGrid() {
+        return terrainSnapToGrid;
+    }
+
+    public void toggleTerrainSnapToGrid() {
+        terrainSnapToGrid = !terrainSnapToGrid;
+        updateStatus("Terrain snap to grid: " + (terrainSnapToGrid ? "ON" : "OFF"));
+    }
+
     public BlockData getSelectedBlock() {
         if (selectedCell == null) {
             return null;
@@ -175,8 +186,8 @@ public class LevelEditor {
         }
     }
 
-    public TerrainPoint findTerrainPointNearCell(int gridX, int gridY) {
-        Vector2 target = gridCellToTerrainPoint(gridX, gridY);
+    public TerrainPoint findTerrainPointNear(float worldX, float worldY) {
+        Vector2 target = new Vector2(worldX, worldY);
         float maxDistance = runtimeLevel.getTileSize() * TERRAIN_POINT_PICK_RADIUS_CELLS;
         TerrainPoint closestPoint = null;
         float closestDistance = Float.MAX_VALUE;
@@ -202,23 +213,23 @@ public class LevelEditor {
         return runtimeLevel.getTerrainPath(DEFAULT_TERRAIN_PATH_ID);
     }
 
-    public TerrainPath buildPrimaryTerrainPathWithAddedPoint(String pointId, int gridX, int gridY) {
+    public TerrainPath buildPrimaryTerrainPathWithAddedPoint(String pointId, float worldX, float worldY) {
         TerrainPath currentPath = getPrimaryTerrainPath();
         List<TerrainPoint> points = currentPath == null ? new ArrayList<>() : copyPoints(currentPath.getPoints());
-        Vector2 position = gridCellToTerrainPoint(gridX, gridY);
+        Vector2 position = resolveTerrainPointPosition(worldX, worldY);
         points.add(new TerrainPoint(pointId, position.x, position.y));
         sortPoints(points);
         return buildTerrainPath(points, currentPath);
     }
 
-    public TerrainPath buildPrimaryTerrainPathWithMovedPoint(String pointId, int gridX, int gridY) {
+    public TerrainPath buildPrimaryTerrainPathWithMovedPoint(String pointId, float worldX, float worldY) {
         TerrainPath currentPath = getPrimaryTerrainPath();
         if (currentPath == null) {
             return null;
         }
 
         List<TerrainPoint> points = new ArrayList<>();
-        Vector2 position = gridCellToTerrainPoint(gridX, gridY);
+        Vector2 position = resolveTerrainPointPosition(worldX, worldY);
         boolean changed = false;
         for (TerrainPoint point : currentPath.getPoints()) {
             if (point.getId().equals(pointId)) {
@@ -391,9 +402,15 @@ public class LevelEditor {
         return null;
     }
 
-    private Vector2 gridCellToTerrainPoint(int gridX, int gridY) {
+    private Vector2 resolveTerrainPointPosition(float worldX, float worldY) {
+        if (!terrainSnapToGrid) {
+            return new Vector2(worldX, worldY);
+        }
+
         float tileSize = runtimeLevel.getTileSize();
-        return new Vector2((gridX + 0.5f) * tileSize, (gridY + 0.5f) * tileSize);
+        float snappedGridX = Math.round((worldX / tileSize) - 0.5f);
+        float snappedGridY = Math.round((worldY / tileSize) - 0.5f);
+        return new Vector2((snappedGridX + 0.5f) * tileSize, (snappedGridY + 0.5f) * tileSize);
     }
 
     private TerrainPath buildTerrainPath(List<TerrainPoint> points, TerrainPath sourcePath) {

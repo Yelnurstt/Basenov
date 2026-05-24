@@ -69,6 +69,9 @@ public class EditorInputAdapter extends InputAdapter {
             case Input.Keys.NUM_4:
                 levelEditor.setTool(new TerrainPointTool());
                 return true;
+            case Input.Keys.G:
+                levelEditor.toggleTerrainSnapToGrid();
+                return true;
             case Input.Keys.S:
                 levelEditor.executeCommand(new SaveLevelCommand(levelEditor));
                 return true;
@@ -87,8 +90,9 @@ public class EditorInputAdapter extends InputAdapter {
         }
 
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
+        Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
-        levelEditor.getToolContext().onMouseDown(levelEditor, gridCell.x, gridCell.y, button);
+        levelEditor.getToolContext().onMouseDown(levelEditor, gridCell.x, gridCell.y, worldPosition.x, worldPosition.y, button);
 
         if (button == Input.Buttons.LEFT) {
             draggingLeftButton = true;
@@ -105,10 +109,12 @@ public class EditorInputAdapter extends InputAdapter {
         }
 
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
+        Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
 
-        if (draggingLeftButton && (gridCell.x != lastDragGridX || gridCell.y != lastDragGridY)) {
-            levelEditor.getToolContext().onMouseDrag(levelEditor, gridCell.x, gridCell.y);
+        boolean gridCellChanged = gridCell.x != lastDragGridX || gridCell.y != lastDragGridY;
+        if (draggingLeftButton && (levelEditor.getToolContext().usesContinuousWorldDrag() || gridCellChanged)) {
+            levelEditor.getToolContext().onMouseDrag(levelEditor, gridCell.x, gridCell.y, worldPosition.x, worldPosition.y);
             lastDragGridX = gridCell.x;
             lastDragGridY = gridCell.y;
         }
@@ -122,8 +128,9 @@ public class EditorInputAdapter extends InputAdapter {
         }
 
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
+        Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
-        levelEditor.getToolContext().onMouseUp(levelEditor, gridCell.x, gridCell.y, button);
+        levelEditor.getToolContext().onMouseUp(levelEditor, gridCell.x, gridCell.y, worldPosition.x, worldPosition.y, button);
 
         if (button == Input.Buttons.LEFT) {
             draggingLeftButton = false;
@@ -140,8 +147,9 @@ public class EditorInputAdapter extends InputAdapter {
         }
 
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
+        Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
-        levelEditor.getToolContext().onMouseMove(levelEditor, gridCell.x, gridCell.y);
+        levelEditor.getToolContext().onMouseMove(levelEditor, gridCell.x, gridCell.y, worldPosition.x, worldPosition.y);
         return true;
     }
 

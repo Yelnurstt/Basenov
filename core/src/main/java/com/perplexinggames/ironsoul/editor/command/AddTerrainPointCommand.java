@@ -6,17 +6,17 @@ import com.perplexinggames.ironsoul.terrain.TerrainPath;
 public class AddTerrainPointCommand implements EditorCommand {
     private final LevelEditor levelEditor;
     private final String pointId;
-    private final int gridX;
-    private final int gridY;
+    private final float worldX;
+    private final float worldY;
     private TerrainPath previousPath;
     private TerrainPath nextPath;
     private boolean changedState;
 
-    public AddTerrainPointCommand(LevelEditor levelEditor, String pointId, int gridX, int gridY) {
+    public AddTerrainPointCommand(LevelEditor levelEditor, String pointId, float worldX, float worldY) {
         this.levelEditor = levelEditor;
         this.pointId = pointId;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        this.worldX = worldX;
+        this.worldY = worldY;
     }
 
     @Override
@@ -27,7 +27,7 @@ public class AddTerrainPointCommand implements EditorCommand {
     @Override
     public void execute() {
         previousPath = levelEditor.getPrimaryTerrainPath();
-        nextPath = levelEditor.buildPrimaryTerrainPathWithAddedPoint(pointId, gridX, gridY);
+        nextPath = levelEditor.buildPrimaryTerrainPathWithAddedPoint(pointId, worldX, worldY);
         changedState = levelEditor.replacePrimaryTerrainPath(nextPath);
         if (changedState) {
             levelEditor.selectTerrainPoint(pointId);

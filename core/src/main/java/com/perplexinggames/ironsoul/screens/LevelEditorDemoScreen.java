@@ -23,7 +23,6 @@ import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
-import com.perplexinggames.ironsoul.physics.BasicPhysicsController;
 import com.perplexinggames.ironsoul.core.Main;
 
 public class LevelEditorDemoScreen implements Screen {
@@ -209,12 +208,13 @@ public class LevelEditorDemoScreen implements Screen {
             .append("BLOCKS: ").append(runtimeLevel.getBlockCount()).append('\n')
             .append("TERRAIN PATHS: ").append(runtimeLevel.getTerrainPathCount())
             .append(" | POINTS: ").append(runtimeLevel.getTerrainPointCount()).append('\n')
+            .append("TERRAIN SNAP: ").append(levelEditor.isTerrainSnapToGrid() ? "ON" : "OFF").append('\n')
             .append("HOVER: ").append(hoveredCell).append('\n')
             .append("SELECTED: ").append(selectedCell).append('\n')
             .append("TERRAIN SELECTED: ").append(formatTerrainPoint(levelEditor.getSelectedTerrainPoint())).append('\n')
             .append("STATUS: ").append(levelEditor.getLastStatusMessage()).append('\n')
             .append("CONTROLS: F1 gameplay | 1 place | 2 erase | 3 select | 4 terrain\n")
-            .append("Terrain: LMB add/drag point | RMB remove point\n")
+            .append("Terrain: LMB add/drag point | RMB remove point | G snap toggle\n")
             .append("S save | L load | Ctrl+Z undo | Ctrl+Y redo | Arrows move camera")
             .toString();
     }
@@ -233,7 +233,7 @@ public class LevelEditorDemoScreen implements Screen {
         if (point == null) {
             return "none";
         }
-        return point.getId() + " @ (" + Math.round(point.getX()) + ", " + Math.round(point.getY()) + ")";
+        return point.getId() + " @ (" + point.getX() + ", " + point.getY() + ")";
     }
 
     private float getInitialTankSpawnY(float tileSize) {
