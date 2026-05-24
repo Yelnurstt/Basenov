@@ -7,22 +7,21 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.GridPoint2;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.perplexinggames.ironsoul.editor.EditorInputAdapter;
 import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
-import com.perplexinggames.ironsoul.entities.Player;
-import com.perplexinggames.ironsoul.gameplay.GameplayController;
-import com.perplexinggames.ironsoul.input.PlayerInputController;
+import com.perplexinggames.ironsoul.entities.PhysicsTank;
 import com.perplexinggames.ironsoul.level.BlockData;
-import com.perplexinggames.ironsoul.level.LevelCollision;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.LevelRenderer;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.level.serialization.JsonLevelSerializer;
 import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
-import com.perplexinggames.ironsoul.physics.BasicPhysicsController;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 
 public class LevelEditorDemoScreen implements Screen {
@@ -31,12 +30,10 @@ public class LevelEditorDemoScreen implements Screen {
     private OrthographicCamera worldCamera;
     private OrthographicCamera hudCamera;
     private RuntimeLevel runtimeLevel;
-    private LevelCollision levelCollision;
     private LevelRenderer levelRenderer;
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
-    private Player player;
-    private GameplayController gameplayController;
+    private PhysicsTank tank;
 
     @Override
     public void show() {
@@ -50,7 +47,6 @@ public class LevelEditorDemoScreen implements Screen {
 
         LevelSerializer levelSerializer = new JsonLevelSerializer();
         runtimeLevel = new RuntimeLevel(LevelEditor.createEmptyLevelData());
-        levelCollision = new LevelCollision(runtimeLevel);
         levelRenderer = new LevelRenderer();
         levelEditor = new LevelEditor(runtimeLevel, levelSerializer);
 
@@ -59,19 +55,13 @@ public class LevelEditorDemoScreen implements Screen {
             levelEditor.wasLastLoadEmptyFallback());
         levelEditor.clearHistory();
 
-        float playerSize = runtimeLevel.getTileSize();
-        player = new Player(playerSize * 2f, playerSize * 2f);
-        gameplayController = new GameplayController(
-            runtimeLevel,
-            player,
-            new PlayerInputController(player),
-            new BasicPhysicsController(player, runtimeLevel, levelCollision, new RuntimeTerrainCollisionProvider(runtimeLevel))
-        );
+        float tileSize = runtimeLevel.getTileSize();
+        tank = new PhysicsTank(tileSize * 2f, getInitialTankSpawnY(tileSize), new RuntimeTerrainCollisionProvider(runtimeLevel));
 
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
         Gdx.input.setInputProcessor(editorInputAdapter);
 
-        centerCameraOnPlayer();
+        centerCameraOnTank();
         worldCamera.update();
     }
 
@@ -95,7 +85,7 @@ public class LevelEditorDemoScreen implements Screen {
 
         batch.setProjectionMatrix(worldCamera.combined);
         batch.begin();
-        player.render(batch);
+        tank.render(batch);
         batch.end();
 
         renderOverlay();
@@ -136,7 +126,7 @@ public class LevelEditorDemoScreen implements Screen {
         batch.dispose();
         font.dispose();
         levelRenderer.dispose();
-        player.dispose();
+        tank.dispose();
     }
 
     private void update(float delta) {
@@ -144,7 +134,7 @@ public class LevelEditorDemoScreen implements Screen {
 
         Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0f);
         worldCamera.unproject(mousePos);
-        player.setAimTarget(mousePos.x, mousePos.y);
+        tank.setAimTarget(mousePos.x, mousePos.y);
 
         if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
             updateGameplay(delta);
@@ -155,15 +145,14 @@ public class LevelEditorDemoScreen implements Screen {
     }
 
     private void updateGameplay(float delta) {
-        gameplayController.update(delta);
-        centerCameraOnPlayer();
+        tank.update(delta);
+        centerCameraOnTank();
         clampCameraToLevelBounds();
         worldCamera.update();
     }
 
-    private void centerCameraOnPlayer() {
-        worldCamera.position.set(player.getX() + player.getWidth() * 0.5f,
-            player.getY() + player.getHeight() * 0.5f, 0f);
+    private void centerCameraOnTank() {
+        worldCamera.position.set(tank.physics.x, tank.physics.y, 0f);
     }
 
     private void clampCameraToLevelBounds() {
@@ -194,7 +183,7 @@ public class LevelEditorDemoScreen implements Screen {
 
     private String buildOverlayText() {
         if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
-            return "MODE: GAMEPLAY\nF2: editor mode";
+            return "MODE: GAMEPLAY\nF2: editor mode\nA/D or arrows: drive tank";
         }
 
         BlockData selectedBlock = levelEditor.getSelectedBlock();
@@ -233,5 +222,19 @@ public class LevelEditorDemoScreen implements Screen {
             return "none";
         }
         return point.getId() + " @ (" + Math.round(point.getX()) + ", " + Math.round(point.getY()) + ")";
+    }
+
+    private float getInitialTankSpawnY(float tileSize) {
+        float highestTerrainY = 0f;
+        for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
+            for (TerrainPoint point : terrainPath.getPoints()) {
+                highestTerrainY = Math.max(highestTerrainY, point.getY());
+            }
+        }
+
+        float spawnMargin = tileSize * 4f;
+        float minSpawnY = tileSize * 3f;
+        float maxSpawnY = runtimeLevel.getPixelHeight() - tileSize * 2f;
+        return MathUtils.clamp(highestTerrainY + spawnMargin, minSpawnY, maxSpawnY);
     }
 }
