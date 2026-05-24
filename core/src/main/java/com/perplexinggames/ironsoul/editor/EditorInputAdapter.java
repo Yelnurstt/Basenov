@@ -22,13 +22,19 @@ import java.util.List;
 
 public class EditorInputAdapter extends InputAdapter {
     private static final float CAMERA_PAN_SPEED = 500f;
+    private static final float MIN_CAMERA_ZOOM = 0.25f;
+    private static final float MAX_CAMERA_ZOOM = 3.5f;
+    private static final float ZOOM_STEP = 0.1f;
 
     private final LevelEditor levelEditor;
     private final OrthographicCamera worldCamera;
     private final Vector3 tempScreenPosition;
     private boolean draggingLeftButton;
+    private boolean draggingMiddleButton;
     private int lastDragGridX;
     private int lastDragGridY;
+    private int lastPanScreenX;
+    private int lastPanScreenY;
 
     public EditorInputAdapter(LevelEditor levelEditor, OrthographicCamera worldCamera) {
         this.levelEditor = levelEditor;
@@ -127,6 +133,13 @@ public class EditorInputAdapter extends InputAdapter {
             return false;
         }
 
+        if (button == Input.Buttons.MIDDLE) {
+            draggingMiddleButton = true;
+            lastPanScreenX = screenX;
+            lastPanScreenY = screenY;
+            return true;
+        }
+
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
         Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
@@ -146,6 +159,11 @@ public class EditorInputAdapter extends InputAdapter {
             return false;
         }
 
+        if (draggingMiddleButton) {
+            panCameraByDrag(screenX, screenY);
+            return true;
+        }
+
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
         Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
@@ -163,6 +181,11 @@ public class EditorInputAdapter extends InputAdapter {
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         if (!levelEditor.isEditorMode()) {
             return false;
+        }
+
+        if (button == Input.Buttons.MIDDLE) {
+            draggingMiddleButton = false;
+            return true;
         }
 
         GridPoint2 gridCell = screenToGridCell(screenX, screenY);
@@ -188,6 +211,27 @@ public class EditorInputAdapter extends InputAdapter {
         Vector2 worldPosition = screenToWorld(screenX, screenY);
         levelEditor.setHoveredCell(gridCell.x, gridCell.y);
         levelEditor.getToolContext().onMouseMove(levelEditor, gridCell.x, gridCell.y, worldPosition.x, worldPosition.y);
+        return true;
+    }
+
+    @Override
+    public boolean scrolled(float amountX, float amountY) {
+        if (!levelEditor.isEditorMode()) {
+            return false;
+        }
+
+        Vector2 beforeZoom = screenToWorld(Gdx.input.getX(), Gdx.input.getY());
+        float zoomFactor = 1f + (Math.abs(amountY) * ZOOM_STEP);
+        if (amountY > 0f) {
+            worldCamera.zoom = Math.min(MAX_CAMERA_ZOOM, worldCamera.zoom * zoomFactor);
+        } else if (amountY < 0f) {
+            worldCamera.zoom = Math.max(MIN_CAMERA_ZOOM, worldCamera.zoom / zoomFactor);
+        }
+        worldCamera.update();
+
+        Vector2 afterZoom = screenToWorld(Gdx.input.getX(), Gdx.input.getY());
+        worldCamera.position.add(beforeZoom.x - afterZoom.x, beforeZoom.y - afterZoom.y, 0f);
+        worldCamera.update();
         return true;
     }
 
@@ -237,5 +281,14 @@ public class EditorInputAdapter extends InputAdapter {
         int currentIndex = Math.max(0, blockIds.indexOf(levelEditor.getActiveBlockId()));
         String nextBlockId = blockIds.get((currentIndex + 1) % blockIds.size());
         levelEditor.selectActiveBlock(nextBlockId);
+    }
+
+    private void panCameraByDrag(int screenX, int screenY) {
+        float deltaX = (screenX - lastPanScreenX) * worldCamera.zoom;
+        float deltaY = (screenY - lastPanScreenY) * worldCamera.zoom;
+        worldCamera.position.add(-deltaX, deltaY, 0f);
+        worldCamera.update();
+        lastPanScreenX = screenX;
+        lastPanScreenY = screenY;
     }
 }

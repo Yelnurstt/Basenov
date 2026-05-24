@@ -188,7 +188,6 @@ public class LevelEditorDemoScreen implements Screen {
         if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
             updateGameplay(delta);
         } else {
-            clampCameraToLevelBounds();
             worldCamera.update();
         }
     }
@@ -286,7 +285,7 @@ public class LevelEditorDemoScreen implements Screen {
             .append("BLOCK: ").append(activeBlock == null ? "none" : activeBlock.id).append('\n')
             .append("SOLID: ").append(runtimeLevel.getBlockCount())
             .append(" | TERRAIN: ").append(runtimeLevel.getTerrainPointCount()).append(" pts\n")
-            .append("F1: gameplay | F3: show menu")
+            .append("MMB drag: pan | Wheel: zoom | F1: gameplay | F3: show menu")
             .toString();
     }
 
