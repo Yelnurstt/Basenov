@@ -11,8 +11,13 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.perplexinggames.ironsoul.entities.PhysicsTank;
 import com.perplexinggames.ironsoul.terrain.SegmentTerrainCollisionProvider;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionBuilder;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionData;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.TerrainSegment;
+
+import java.util.Collections;
 
 public class ControlDemoScreen implements Screen {
     private SpriteBatch batch;
@@ -21,9 +26,8 @@ public class ControlDemoScreen implements Screen {
     private OrthographicCamera camera;
 
     private TerrainPath terrainPath;
+    private TerrainCollisionData terrainCollisionData;
     private PhysicsTank tank;
-
-    // Включает/выключает отображение лучей (probes) и нормалей
     private boolean debugMode = true;
 
     @Override
@@ -33,97 +37,99 @@ public class ControlDemoScreen implements Screen {
         font = new BitmapFont();
         camera = new OrthographicCamera(1280, 720);
 
-        // 1. Создаем наш ландшафт из линий
-        terrainPath = new TerrainPath();
-        terrainPath.addSegment(-500, 100, 300, 100);       // Плоско
-        terrainPath.addSegment(300, 100, 600, 300);        // Подъем
-        terrainPath.addSegment(600, 300, 900, 300);        // Верхняя площадка
-        terrainPath.addSegment(900, 300, 1100, 100);       // Спуск
-        // Пропасть между 1100 и 1250!
-        terrainPath.addSegment(1250, 100, 1500, 400);      // Резкий подъем
-        terrainPath.addSegment(1500, 400, 2000, 400);      // Финальная площадка
-
-        // 2. Создаем провайдер коллизий для физики
-        SegmentTerrainCollisionProvider collisionProvider = new SegmentTerrainCollisionProvider(terrainPath);
-
-        // 3. Спавним танк в воздухе над стартовой точкой
-        tank = new PhysicsTank(0, 200, collisionProvider);
+        terrainPath = createLinearTerrainPath();
+        terrainCollisionData = new TerrainCollisionBuilder().build(terrainPath);
+        tank = new PhysicsTank(0f, 200f, new SegmentTerrainCollisionProvider(Collections.singletonList(terrainCollisionData)));
     }
 
     @Override
     public void render(float delta) {
-        // --- Прицеливание башней ---
-        Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0f);
         camera.unproject(mousePos);
         tank.setAimTarget(mousePos.x, mousePos.y);
 
-        // --- Обновление физики ---
         tank.update(delta);
 
-        // --- Камера плавно следит за танком ---
         camera.position.x += (tank.physics.x - camera.position.x) * 5f * delta;
         camera.position.y += ((tank.physics.y + 150f) - camera.position.y) * 5f * delta;
         camera.update();
 
-        // Очистка экрана
-        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1);
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.2f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // === 1. ОТРИСОВКА ЛАНДШАФТА И ДЕБАГА ===
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-
-        // Земля (зеленая)
         shapeRenderer.setColor(Color.LIME);
-        for (TerrainSegment seg : terrainPath.getSegments()) {
-            shapeRenderer.line(seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+        for (TerrainSegment segment : terrainCollisionData.getSegments()) {
+            shapeRenderer.line(segment.p1.x, segment.p1.y, segment.p2.x, segment.p2.y);
         }
 
         if (debugMode) {
-            // Лучи-щупы гусениц (красные)
             shapeRenderer.setColor(Color.RED);
-            float pY = tank.physics.y + tank.physics.probeHeightOffset;
-            float lX = tank.physics.x - tank.physics.trackWidth / 2f;
-            float rX = tank.physics.x + tank.physics.trackWidth / 2f;
+            float probeY = tank.physics.y + tank.physics.probeHeightOffset;
+            float leftX = tank.physics.x - tank.physics.trackWidth / 2f;
+            float rightX = tank.physics.x + tank.physics.trackWidth / 2f;
+            shapeRenderer.line(leftX, probeY, leftX, probeY - tank.physics.probeLength);
+            shapeRenderer.line(rightX, probeY, rightX, probeY - tank.physics.probeLength);
 
-            shapeRenderer.line(lX, pY, lX, pY - tank.physics.probeLength);
-            shapeRenderer.line(rX, pY, rX, pY - tank.physics.probeLength);
-
-            // Нормали поверхности (голубые векторы)
             shapeRenderer.setColor(Color.CYAN);
             if (tank.physics.leftContact.hasContact) {
-                shapeRenderer.circle(tank.physics.leftContact.point.x, tank.physics.leftContact.point.y, 4);
-                shapeRenderer.line(tank.physics.leftContact.point,
-                    tank.physics.leftContact.point.cpy().add(tank.physics.leftContact.normal.cpy().scl(25)));
+                shapeRenderer.circle(tank.physics.leftContact.point.x, tank.physics.leftContact.point.y, 4f);
+                shapeRenderer.line(
+                    tank.physics.leftContact.point,
+                    tank.physics.leftContact.point.cpy().add(tank.physics.leftContact.normal.cpy().scl(25f))
+                );
             }
             if (tank.physics.rightContact.hasContact) {
-                shapeRenderer.circle(tank.physics.rightContact.point.x, tank.physics.rightContact.point.y, 4);
-                shapeRenderer.line(tank.physics.rightContact.point,
-                    tank.physics.rightContact.point.cpy().add(tank.physics.rightContact.normal.cpy().scl(25)));
+                shapeRenderer.circle(tank.physics.rightContact.point.x, tank.physics.rightContact.point.y, 4f);
+                shapeRenderer.line(
+                    tank.physics.rightContact.point,
+                    tank.physics.rightContact.point.cpy().add(tank.physics.rightContact.normal.cpy().scl(25f))
+                );
             }
         }
         shapeRenderer.end();
 
-        // === 2. ОТРИСОВКА ТАНКА ===
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         tank.render(batch);
         batch.end();
 
-        // === 3. ОТРИСОВКА ИНФОРМАЦИИ (UI) ===
-        batch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        batch.getProjectionMatrix().setToOrtho2D(0f, 0f, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch.begin();
-        font.draw(batch, "State: " + tank.physics.state, 10, Gdx.graphics.getHeight() - 10);
-        font.draw(batch, "Rotation: " + String.format("%.1f", tank.physics.rotation), 10, Gdx.graphics.getHeight() - 30);
-        font.draw(batch, "Speed: " + String.format("%.1f", tank.physics.velocity.len()), 10, Gdx.graphics.getHeight() - 50);
-        font.draw(batch, "Controls: A/D - Move, Mouse - Aim", 10, Gdx.graphics.getHeight() - 70);
+        font.draw(batch, "State: " + tank.physics.state, 10f, Gdx.graphics.getHeight() - 10f);
+        font.draw(batch, "Rotation: " + String.format("%.1f", tank.physics.rotation), 10f, Gdx.graphics.getHeight() - 30f);
+        font.draw(batch, "Speed: " + String.format("%.1f", tank.physics.velocity.len()), 10f, Gdx.graphics.getHeight() - 50f);
+        font.draw(batch, "Controls: A/D - Move, Mouse - Aim", 10f, Gdx.graphics.getHeight() - 70f);
         batch.end();
     }
 
-    @Override public void resize(int width, int height) {
+    private TerrainPath createLinearTerrainPath() {
+        return new TerrainPath(
+            "control-demo-terrain",
+            java.util.Arrays.asList(
+                new TerrainPoint("p0", -500f, 100f),
+                new TerrainPoint("p1", 300f, 100f),
+                new TerrainPoint("p2", 600f, 300f),
+                new TerrainPoint("p3", 900f, 300f),
+                new TerrainPoint("p4", 1100f, 100f),
+                new TerrainPoint("p5", 1250f, 100f),
+                new TerrainPoint("p6", 1500f, 400f),
+                new TerrainPoint("p7", 2000f, 400f)
+            ),
+            TerrainPath.CurveType.LINEAR,
+            "demo-dirt",
+            4f,
+            1f
+        );
+    }
+
+    @Override
+    public void resize(int width, int height) {
         camera.viewportWidth = width;
         camera.viewportHeight = height;
     }
+
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}

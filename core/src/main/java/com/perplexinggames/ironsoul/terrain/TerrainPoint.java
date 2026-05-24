@@ -1,10 +1,37 @@
 package com.perplexinggames.ironsoul.terrain;
 
 public class TerrainPoint {
-    public float x, y;
+    private String id;
+    public float x;
+    public float y;
+
+    public TerrainPoint() {
+        this("", 0f, 0f);
+    }
 
     public TerrainPoint(float x, float y) {
+        this("", x, y);
+    }
+
+    public TerrainPoint(String id, float x, float y) {
+        this.id = id;
         this.x = x;
         this.y = y;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public TerrainPoint copy() {
+        return new TerrainPoint(id, x, y);
     }
 }

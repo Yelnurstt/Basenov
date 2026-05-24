@@ -1,30 +1,62 @@
 package com.perplexinggames.ironsoul.terrain;
 
-public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider {
-    private final TerrainPath path;
+import com.badlogic.gdx.math.Vector2;
 
-    public SegmentTerrainCollisionProvider(TerrainPath path) {
-        this.path = path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider {
+    private final List<TerrainCollisionData> collisionData;
+
+    public SegmentTerrainCollisionProvider(TerrainPath terrainPath) {
+        this(Collections.singletonList(new TerrainCollisionBuilder().build(terrainPath)));
+    }
+
+    public SegmentTerrainCollisionProvider(Collection<TerrainCollisionData> collisionData) {
+        this.collisionData = new ArrayList<>(collisionData);
     }
 
     @Override
-    public void getContactInfo(float x, float y, float probeLength, TerrainContactInfo outInfo) {
-        outInfo.reset();
+    public TerrainContactInfo findGroundBelow(Vector2 position, float probeDistance) {
+        TerrainSegment bestSegment = null;
+        TerrainCollisionData bestData = null;
+        float bestSurfaceY = Float.NEGATIVE_INFINITY;
 
-        for (TerrainSegment segment : path.getSegments()) {
-            if (segment.containsX(x)) {
-                float surfaceY = segment.getY(x);
+        for (TerrainCollisionData data : collisionData) {
+            for (TerrainSegment segment : data.getSegments()) {
+                if (!segment.containsX(position.x)) {
+                    continue;
+                }
 
-                // ФИКС: Даем погрешность (-15f). Если танк въезжает на крутую гору,
-                // луч может начаться чуть ниже поверхности. Регистрируем контакт все равно!
-                if (y >= surfaceY - 15f && (y - probeLength) <= surfaceY + 15f) {
-                    outInfo.hasContact = true;
-                    outInfo.point.set(x, surfaceY);
-                    outInfo.normal.set(segment.normal);
-                    outInfo.angle = segment.angle;
-                    return;
+                float surfaceY = segment.getYAtX(position.x);
+                float distanceToSurface = position.y - surfaceY;
+                if (distanceToSurface < -15f || distanceToSurface > probeDistance + 15f) {
+                    continue;
+                }
+
+                if (surfaceY > bestSurfaceY) {
+                    bestSurfaceY = surfaceY;
+                    bestSegment = segment;
+                    bestData = data;
                 }
             }
         }
+
+        if (bestSegment == null || bestData == null) {
+            return TerrainContactInfo.noGround(position);
+        }
+
+        return new TerrainContactInfo(
+            new Vector2(position.x, bestSurfaceY),
+            bestSegment.getNormal(),
+            bestSegment.getTangent(),
+            bestSegment.getAngle(),
+            bestSegment,
+            true,
+            bestData.getMaterial(),
+            bestData.getFriction()
+        );
     }
 }

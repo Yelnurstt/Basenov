@@ -13,6 +13,7 @@ import com.perplexinggames.ironsoul.editor.command.SaveLevelCommand;
 import com.perplexinggames.ironsoul.editor.tool.EraseBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.PlaceBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.SelectBlockTool;
+import com.perplexinggames.ironsoul.editor.tool.TerrainPointTool;
 
 public class EditorInputAdapter extends InputAdapter {
     private static final float CAMERA_PAN_SPEED = 500f;
@@ -64,6 +65,9 @@ public class EditorInputAdapter extends InputAdapter {
                 return true;
             case Input.Keys.NUM_3:
                 levelEditor.setTool(new SelectBlockTool());
+                return true;
+            case Input.Keys.NUM_4:
+                levelEditor.setTool(new TerrainPointTool());
                 return true;
             case Input.Keys.S:
                 levelEditor.executeCommand(new SaveLevelCommand(levelEditor));

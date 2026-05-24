@@ -14,13 +14,7 @@ public class GroundedState extends AbstractTankControlState {
 
     @Override
     public void update(TankController controller, float delta) {
-        controller.applyHorizontalMovement(
-            delta,
-            controller.getConfig().getMoveAcceleration(),
-            controller.getConfig().getGroundDeceleration()
-        );
-        controller.snapToGround();
-        controller.integrateHorizontal(delta);
+        controller.applyGroundMovement(delta);
 
         if (!controller.isGrounded()) {
             controller.changeState(TankControlStateId.AIRBORNE);

@@ -19,6 +19,13 @@ public class TankPhysicsConfig {
     private final float dashCooldown;
     private final float ramImpulse;
     private final float stunDuration;
+    private final float probeInset;
+    private final float probeStartHeight;
+    private final float probeDistance;
+    private final float trackToBodyOffset;
+    private final float rotationSmoothing;
+    private final float snapToGroundSmoothing;
+    private final float slopeResistance;
 
     public TankPhysicsConfig(
         float worldWidth,
@@ -40,6 +47,62 @@ public class TankPhysicsConfig {
         float ramImpulse,
         float stunDuration
     ) {
+        this(
+            worldWidth,
+            groundY,
+            moveAcceleration,
+            airAcceleration,
+            groundDeceleration,
+            airDeceleration,
+            maxMoveSpeed,
+            crouchSpeedMultiplier,
+            jumpVelocity,
+            wallJumpHorizontalVelocity,
+            gravity,
+            maxFallSpeed,
+            wallSlideMaxFallSpeed,
+            dashSpeed,
+            dashDuration,
+            dashCooldown,
+            ramImpulse,
+            stunDuration,
+            0.35f,
+            0.9f,
+            2.4f,
+            0.18f,
+            10f,
+            12f,
+            0.3f
+        );
+    }
+
+    public TankPhysicsConfig(
+        float worldWidth,
+        float groundY,
+        float moveAcceleration,
+        float airAcceleration,
+        float groundDeceleration,
+        float airDeceleration,
+        float maxMoveSpeed,
+        float crouchSpeedMultiplier,
+        float jumpVelocity,
+        float wallJumpHorizontalVelocity,
+        float gravity,
+        float maxFallSpeed,
+        float wallSlideMaxFallSpeed,
+        float dashSpeed,
+        float dashDuration,
+        float dashCooldown,
+        float ramImpulse,
+        float stunDuration,
+        float probeInset,
+        float probeStartHeight,
+        float probeDistance,
+        float trackToBodyOffset,
+        float rotationSmoothing,
+        float snapToGroundSmoothing,
+        float slopeResistance
+    ) {
         this.worldWidth = worldWidth;
         this.groundY = groundY;
         this.moveAcceleration = moveAcceleration;
@@ -58,6 +121,13 @@ public class TankPhysicsConfig {
         this.dashCooldown = dashCooldown;
         this.ramImpulse = ramImpulse;
         this.stunDuration = stunDuration;
+        this.probeInset = probeInset;
+        this.probeStartHeight = probeStartHeight;
+        this.probeDistance = probeDistance;
+        this.trackToBodyOffset = trackToBodyOffset;
+        this.rotationSmoothing = rotationSmoothing;
+        this.snapToGroundSmoothing = snapToGroundSmoothing;
+        this.slopeResistance = slopeResistance;
     }
 
     public static TankPhysicsConfig defaultConfig() {
@@ -79,7 +149,14 @@ public class TankPhysicsConfig {
             0.18f,
             0.75f,
             8f,
-            0.45f
+            0.45f,
+            0.35f,
+            0.9f,
+            2.4f,
+            0.18f,
+            10f,
+            12f,
+            0.3f
         );
     }
 
@@ -153,5 +230,33 @@ public class TankPhysicsConfig {
 
     public float getStunDuration() {
         return stunDuration;
+    }
+
+    public float getProbeInset() {
+        return probeInset;
+    }
+
+    public float getProbeStartHeight() {
+        return probeStartHeight;
+    }
+
+    public float getProbeDistance() {
+        return probeDistance;
+    }
+
+    public float getTrackToBodyOffset() {
+        return trackToBodyOffset;
+    }
+
+    public float getRotationSmoothing() {
+        return rotationSmoothing;
+    }
+
+    public float getSnapToGroundSmoothing() {
+        return snapToGroundSmoothing;
+    }
+
+    public float getSlopeResistance() {
+        return slopeResistance;
     }
 }

@@ -7,6 +7,7 @@ public class TankModel {
     private final float height;
     private float velocityX;
     private float velocityY;
+    private float rotationDegrees;
     private FacingDirection facingDirection = FacingDirection.RIGHT;
 
     public TankModel(float x, float y, float width, float height) {
@@ -62,5 +63,13 @@ public class TankModel {
 
     public void setFacingDirection(FacingDirection facingDirection) {
         this.facingDirection = facingDirection;
+    }
+
+    public float getRotationDegrees() {
+        return rotationDegrees;
+    }
+
+    public void setRotationDegrees(float rotationDegrees) {
+        this.rotationDegrees = rotationDegrees;
     }
 }

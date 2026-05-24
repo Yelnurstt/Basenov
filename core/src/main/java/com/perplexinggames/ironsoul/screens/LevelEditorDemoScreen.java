@@ -23,6 +23,7 @@ import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.level.serialization.JsonLevelSerializer;
 import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
 import com.perplexinggames.ironsoul.physics.BasicPhysicsController;
+import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 
 public class LevelEditorDemoScreen implements Screen {
     private SpriteBatch batch;
@@ -64,7 +65,7 @@ public class LevelEditorDemoScreen implements Screen {
             runtimeLevel,
             player,
             new PlayerInputController(player),
-            new BasicPhysicsController(player, runtimeLevel, levelCollision)
+            new BasicPhysicsController(player, runtimeLevel, levelCollision, new RuntimeTerrainCollisionProvider(runtimeLevel))
         );
 
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
@@ -81,7 +82,13 @@ public class LevelEditorDemoScreen implements Screen {
         ScreenUtils.clear(0.09f, 0.1f, 0.12f, 1f);
 
         if (levelEditor.getMode() == EditorMode.EDITOR) {
-            levelRenderer.renderEditor(runtimeLevel, worldCamera, levelEditor.getHoveredCell(), levelEditor.getSelectedCell());
+            levelRenderer.renderEditor(
+                runtimeLevel,
+                worldCamera,
+                levelEditor.getHoveredCell(),
+                levelEditor.getSelectedCell(),
+                levelEditor.getSelectedTerrainPoint()
+            );
         } else {
             levelRenderer.renderGameplay(runtimeLevel, worldCamera);
         }
@@ -199,10 +206,14 @@ public class LevelEditorDemoScreen implements Screen {
             .append("MODE: EDITOR\n")
             .append("TOOL: ").append(levelEditor.getCurrentToolName()).append('\n')
             .append("BLOCKS: ").append(runtimeLevel.getBlockCount()).append('\n')
+            .append("TERRAIN PATHS: ").append(runtimeLevel.getTerrainPathCount())
+            .append(" | POINTS: ").append(runtimeLevel.getTerrainPointCount()).append('\n')
             .append("HOVER: ").append(hoveredCell).append('\n')
             .append("SELECTED: ").append(selectedCell).append('\n')
+            .append("TERRAIN SELECTED: ").append(formatTerrainPoint(levelEditor.getSelectedTerrainPoint())).append('\n')
             .append("STATUS: ").append(levelEditor.getLastStatusMessage()).append('\n')
-            .append("CONTROLS: F1 gameplay | 1 place | 2 erase | 3 select\n")
+            .append("CONTROLS: F1 gameplay | 1 place | 2 erase | 3 select | 4 terrain\n")
+            .append("Terrain: LMB add/drag point | RMB remove point\n")
             .append("S save | L load | Ctrl+Z undo | Ctrl+Y redo | Arrows move camera")
             .toString();
     }
@@ -215,5 +226,12 @@ public class LevelEditorDemoScreen implements Screen {
             return "(" + cell.x + ", " + cell.y + ") [out]";
         }
         return "(" + cell.x + ", " + cell.y + ")";
+    }
+
+    private String formatTerrainPoint(com.perplexinggames.ironsoul.terrain.TerrainPoint point) {
+        if (point == null) {
+            return "none";
+        }
+        return point.getId() + " @ (" + Math.round(point.getX()) + ", " + Math.round(point.getY()) + ")";
     }
 }

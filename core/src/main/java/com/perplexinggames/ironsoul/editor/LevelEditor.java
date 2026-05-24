@@ -3,6 +3,7 @@ package com.perplexinggames.ironsoul.editor;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.GridPoint2;
+import com.badlogic.gdx.math.Vector2;
 import com.perplexinggames.ironsoul.editor.command.EditorCommand;
 import com.perplexinggames.ironsoul.editor.command.EditorCommandHistory;
 import com.perplexinggames.ironsoul.editor.event.BlockErasedEvent;
@@ -19,12 +20,20 @@ import com.perplexinggames.ironsoul.level.BlockType;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.level.serialization.LevelSerializer;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class LevelEditor {
     public static final String DEFAULT_LEVEL_PATH = "levels/test-level.json";
+    public static final String DEFAULT_TERRAIN_PATH_ID = "main-terrain";
     private static final int DEFAULT_LEVEL_WIDTH = 40;
     private static final int DEFAULT_LEVEL_HEIGHT = 30;
     private static final int DEFAULT_TILE_SIZE = 32;
+    private static final float TERRAIN_POINT_PICK_RADIUS_CELLS = 0.9f;
 
     private final RuntimeLevel runtimeLevel;
     private final LevelSerializer levelSerializer;
@@ -35,9 +44,11 @@ public class LevelEditor {
     private EditorMode mode;
     private GridPoint2 hoveredCell;
     private GridPoint2 selectedCell;
+    private String selectedTerrainPointId;
     private String lastStatusMessage;
     private String lastLoadSourceDescription;
     private boolean lastLoadEmptyFallback;
+    private int terrainPointSequence;
 
     public LevelEditor(RuntimeLevel runtimeLevel, LevelSerializer levelSerializer) {
         this.runtimeLevel = runtimeLevel;
@@ -120,6 +131,10 @@ public class LevelEditor {
         return selectedCell == null ? null : new GridPoint2(selectedCell);
     }
 
+    public TerrainPoint getSelectedTerrainPoint() {
+        return findTerrainPointById(selectedTerrainPointId);
+    }
+
     public BlockData getSelectedBlock() {
         if (selectedCell == null) {
             return null;
@@ -145,6 +160,121 @@ public class LevelEditor {
 
     public void restoreSelection(GridPoint2 selection) {
         selectedCell = selection == null ? null : new GridPoint2(selection);
+    }
+
+    public void selectTerrainPoint(String pointId) {
+        selectedTerrainPointId = pointId;
+        if (pointId == null) {
+            updateStatus("Terrain point selection cleared");
+            return;
+        }
+
+        TerrainPoint point = findTerrainPointById(pointId);
+        if (point != null) {
+            updateStatus("Selected terrain point " + point.getId());
+        }
+    }
+
+    public TerrainPoint findTerrainPointNearCell(int gridX, int gridY) {
+        Vector2 target = gridCellToTerrainPoint(gridX, gridY);
+        float maxDistance = runtimeLevel.getTileSize() * TERRAIN_POINT_PICK_RADIUS_CELLS;
+        TerrainPoint closestPoint = null;
+        float closestDistance = Float.MAX_VALUE;
+
+        for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
+            for (TerrainPoint point : terrainPath.getPoints()) {
+                float distance = target.dst(point.getX(), point.getY());
+                if (distance <= maxDistance && distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPoint = point.copy();
+                }
+            }
+        }
+        return closestPoint;
+    }
+
+    public String createTerrainPointId() {
+        terrainPointSequence++;
+        return "terrain-point-" + terrainPointSequence;
+    }
+
+    public TerrainPath getPrimaryTerrainPath() {
+        return runtimeLevel.getTerrainPath(DEFAULT_TERRAIN_PATH_ID);
+    }
+
+    public TerrainPath buildPrimaryTerrainPathWithAddedPoint(String pointId, int gridX, int gridY) {
+        TerrainPath currentPath = getPrimaryTerrainPath();
+        List<TerrainPoint> points = currentPath == null ? new ArrayList<>() : copyPoints(currentPath.getPoints());
+        Vector2 position = gridCellToTerrainPoint(gridX, gridY);
+        points.add(new TerrainPoint(pointId, position.x, position.y));
+        sortPoints(points);
+        return buildTerrainPath(points, currentPath);
+    }
+
+    public TerrainPath buildPrimaryTerrainPathWithMovedPoint(String pointId, int gridX, int gridY) {
+        TerrainPath currentPath = getPrimaryTerrainPath();
+        if (currentPath == null) {
+            return null;
+        }
+
+        List<TerrainPoint> points = new ArrayList<>();
+        Vector2 position = gridCellToTerrainPoint(gridX, gridY);
+        boolean changed = false;
+        for (TerrainPoint point : currentPath.getPoints()) {
+            if (point.getId().equals(pointId)) {
+                points.add(new TerrainPoint(pointId, position.x, position.y));
+                changed = true;
+            } else {
+                points.add(point.copy());
+            }
+        }
+        if (!changed) {
+            return null;
+        }
+        sortPoints(points);
+        return buildTerrainPath(points, currentPath);
+    }
+
+    public TerrainPath buildPrimaryTerrainPathWithRemovedPoint(String pointId) {
+        TerrainPath currentPath = getPrimaryTerrainPath();
+        if (currentPath == null) {
+            return null;
+        }
+
+        List<TerrainPoint> points = new ArrayList<>();
+        boolean removed = false;
+        for (TerrainPoint point : currentPath.getPoints()) {
+            if (point.getId().equals(pointId)) {
+                removed = true;
+                continue;
+            }
+            points.add(point.copy());
+        }
+        if (!removed) {
+            return null;
+        }
+        if (points.isEmpty()) {
+            return new TerrainPath(DEFAULT_TERRAIN_PATH_ID, points, currentPath.getCurveType(),
+                currentPath.getMaterial(), currentPath.getDebugWidth(), currentPath.getFriction());
+        }
+        sortPoints(points);
+        return buildTerrainPath(points, currentPath);
+    }
+
+    public boolean replacePrimaryTerrainPath(TerrainPath terrainPath) {
+        if (terrainPath == null || terrainPath.getPoints().isEmpty()) {
+            boolean removed = runtimeLevel.removeTerrainPath(DEFAULT_TERRAIN_PATH_ID);
+            if (removed) {
+                updateStatus("Removed terrain path");
+            }
+            return removed;
+        }
+
+        boolean changed = runtimeLevel.setTerrainPath(terrainPath);
+        if (changed) {
+            updateStatus("Terrain points: " + runtimeLevel.getTerrainPointCount());
+        }
+        return changed;
     }
 
     public boolean placeBlock(int gridX, int gridY, BlockType blockType) {
@@ -199,6 +329,8 @@ public class LevelEditor {
     public void applyLoadedLevel(LevelData levelData, String sourceDescription, boolean emptyFallback) {
         runtimeLevel.apply(levelData);
         selectedCell = null;
+        selectedTerrainPointId = null;
+        terrainPointSequence = runtimeLevel.getTerrainPointCount();
         eventBus.post(new LevelLoadedEvent(sourceDescription, runtimeLevel.getBlockCount(), emptyFallback));
     }
 
@@ -243,6 +375,51 @@ public class LevelEditor {
             updateStatus("Loaded " + event.blockCount + " blocks from " + source);
         });
         eventBus.subscribe(EditorModeChangedEvent.class, event -> updateStatus("Mode: " + event.currentMode));
+    }
+
+    private TerrainPoint findTerrainPointById(String pointId) {
+        if (pointId == null) {
+            return null;
+        }
+        for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
+            for (TerrainPoint point : terrainPath.getPoints()) {
+                if (pointId.equals(point.getId())) {
+                    return point.copy();
+                }
+            }
+        }
+        return null;
+    }
+
+    private Vector2 gridCellToTerrainPoint(int gridX, int gridY) {
+        float tileSize = runtimeLevel.getTileSize();
+        return new Vector2((gridX + 0.5f) * tileSize, (gridY + 0.5f) * tileSize);
+    }
+
+    private TerrainPath buildTerrainPath(List<TerrainPoint> points, TerrainPath sourcePath) {
+        TerrainPath template = sourcePath == null
+            ? new TerrainPath(DEFAULT_TERRAIN_PATH_ID, new ArrayList<>(), TerrainPath.CurveType.LINEAR, "editor-dirt", 4f, 1f)
+            : sourcePath;
+        return new TerrainPath(
+            DEFAULT_TERRAIN_PATH_ID,
+            points,
+            template.getCurveType(),
+            template.getMaterial(),
+            template.getDebugWidth(),
+            template.getFriction()
+        );
+    }
+
+    private List<TerrainPoint> copyPoints(List<TerrainPoint> sourcePoints) {
+        List<TerrainPoint> copies = new ArrayList<>(sourcePoints.size());
+        for (TerrainPoint sourcePoint : sourcePoints) {
+            copies.add(sourcePoint.copy());
+        }
+        return copies;
+    }
+
+    private void sortPoints(List<TerrainPoint> points) {
+        points.sort(Comparator.comparingDouble(TerrainPoint::getX).thenComparingDouble(TerrainPoint::getY));
     }
 
     private void updateStatus(String statusMessage) {

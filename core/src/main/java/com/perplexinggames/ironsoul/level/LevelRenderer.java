@@ -5,32 +5,51 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionBuilder;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionData;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.terrain.TerrainSegment;
 
 public class LevelRenderer {
     private final ShapeRenderer shapeRenderer;
+    private final TerrainCollisionBuilder terrainCollisionBuilder;
     private final Color blockColor;
     private final Color gridColor;
     private final Color hoveredColor;
     private final Color selectedColor;
+    private final Color terrainSegmentColor;
+    private final Color terrainPointColor;
+    private final Color selectedTerrainPointColor;
 
     public LevelRenderer() {
         this.shapeRenderer = new ShapeRenderer();
+        this.terrainCollisionBuilder = new TerrainCollisionBuilder();
         this.blockColor = new Color(0.24f, 0.27f, 0.30f, 1f);
         this.gridColor = new Color(0.38f, 0.44f, 0.48f, 0.65f);
         this.hoveredColor = new Color(1f, 0.84f, 0.2f, 1f);
         this.selectedColor = new Color(0.2f, 0.92f, 1f, 1f);
+        this.terrainSegmentColor = new Color(0.38f, 0.82f, 0.52f, 1f);
+        this.terrainPointColor = new Color(0.96f, 0.76f, 0.2f, 1f);
+        this.selectedTerrainPointColor = new Color(1f, 0.4f, 0.25f, 1f);
     }
 
     public void renderGameplay(RuntimeLevel runtimeLevel, OrthographicCamera camera) {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         drawBlocks(runtimeLevel);
+        drawTerrainSegments(runtimeLevel);
         shapeRenderer.end();
     }
 
     public void renderEditor(RuntimeLevel runtimeLevel, OrthographicCamera camera, GridPoint2 hoveredCell,
-                             GridPoint2 selectedCell) {
+                             GridPoint2 selectedCell, TerrainPoint selectedTerrainPoint) {
         renderGameplay(runtimeLevel, camera);
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        drawTerrainPoints(runtimeLevel, selectedTerrainPoint);
+        shapeRenderer.end();
 
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
@@ -49,6 +68,32 @@ public class LevelRenderer {
         shapeRenderer.setColor(blockColor);
         for (BlockData block : runtimeLevel.getBlocks()) {
             shapeRenderer.rect(block.x * tileSize, block.y * tileSize, tileSize, tileSize);
+        }
+    }
+
+    private void drawTerrainSegments(RuntimeLevel runtimeLevel) {
+        shapeRenderer.setColor(terrainSegmentColor);
+        for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
+            TerrainCollisionData collisionData = terrainCollisionBuilder.build(terrainPath);
+            for (TerrainSegment segment : collisionData.getSegments()) {
+                shapeRenderer.rectLine(
+                    segment.getStartPoint().getX(),
+                    segment.getStartPoint().getY(),
+                    segment.getEndPoint().getX(),
+                    segment.getEndPoint().getY(),
+                    Math.max(2f, terrainPath.getDebugWidth())
+                );
+            }
+        }
+    }
+
+    private void drawTerrainPoints(RuntimeLevel runtimeLevel, TerrainPoint selectedTerrainPoint) {
+        for (TerrainPath terrainPath : runtimeLevel.getTerrainPaths()) {
+            for (TerrainPoint point : terrainPath.getPoints()) {
+                boolean selected = selectedTerrainPoint != null && point.getId().equals(selectedTerrainPoint.getId());
+                shapeRenderer.setColor(selected ? selectedTerrainPointColor : terrainPointColor);
+                shapeRenderer.circle(point.getX(), point.getY(), selected ? 7f : 5f, 16);
+            }
         }
     }
 

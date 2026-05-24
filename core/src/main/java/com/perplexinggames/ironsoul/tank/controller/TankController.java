@@ -1,5 +1,7 @@
 package com.perplexinggames.ironsoul.tank.controller;
 
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.perplexinggames.ironsoul.tank.state.AirborneState;
 import com.perplexinggames.ironsoul.tank.state.DashState;
 import com.perplexinggames.ironsoul.tank.state.GroundedState;
@@ -7,6 +9,8 @@ import com.perplexinggames.ironsoul.tank.state.StunnedState;
 import com.perplexinggames.ironsoul.tank.state.TankControlState;
 import com.perplexinggames.ironsoul.tank.state.TankControlStateId;
 import com.perplexinggames.ironsoul.tank.state.WallSlideState;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionProvider;
+import com.perplexinggames.ironsoul.terrain.TerrainContactInfo;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -14,25 +18,41 @@ import java.util.Map;
 public class TankController {
     private final TankModel model;
     private final TankPhysicsConfig config;
+    private final TerrainCollisionProvider terrainCollisionProvider;
     private final Map<TankControlStateId, TankControlState> states = new EnumMap<>(TankControlStateId.class);
+    private final Vector2 leftTrackProbe = new Vector2();
+    private final Vector2 rightTrackProbe = new Vector2();
+    private final Vector2 averageContactPoint = new Vector2();
+    private final Vector2 averageSurfaceNormal = new Vector2(0f, 1f);
+    private final Vector2 averageSurfaceTangent = new Vector2(1f, 0f);
 
     private TankControlState currentState;
+    private TerrainContactInfo leftTrackContact = TerrainContactInfo.noGround(new Vector2());
+    private TerrainContactInfo rightTrackContact = TerrainContactInfo.noGround(new Vector2());
     private boolean moveLeftHeld;
     private boolean moveRightHeld;
     private boolean crouching;
+    private boolean grounded;
     private float dashCooldownRemaining;
+    private float detachFromGroundRemaining;
+    private float surfaceAngle;
+    private float targetTankRotation;
+    private float activeGroundFriction = 1f;
     private String lastAction = "System initialized";
 
-    public TankController(TankModel model, TankPhysicsConfig config) {
+    public TankController(TankModel model, TankPhysicsConfig config, TerrainCollisionProvider terrainCollisionProvider) {
         this.model = model;
         this.config = config;
+        this.terrainCollisionProvider = terrainCollisionProvider;
         registerStates();
-        currentState = states.get(TankControlStateId.GROUNDED);
+        refreshGroundContacts();
+        currentState = states.get(grounded ? TankControlStateId.GROUNDED : TankControlStateId.AIRBORNE);
         currentState.enter(this);
     }
 
     public void update(float delta) {
         dashCooldownRemaining = Math.max(0f, dashCooldownRemaining - delta);
+        detachFromGroundRemaining = Math.max(0f, detachFromGroundRemaining - delta);
         currentState.update(this, delta);
     }
 
@@ -72,6 +92,44 @@ public class TankController {
         lastAction = crouching ? "Suspension lowered" : "Suspension reset";
     }
 
+    public void applyGroundMovement(float delta) {
+        refreshGroundContacts();
+        if (!grounded) {
+            smoothAirborneRotation(delta);
+            return;
+        }
+
+        Vector2 tangent = resolveGroundMovementTangent();
+        float targetAxis = getMoveAxis();
+        float speedLimit = crouching ? config.getMaxMoveSpeed() * config.getCrouchSpeedMultiplier() : config.getMaxMoveSpeed();
+        float tangentSpeed = model.getVelocityX() * tangent.x + model.getVelocityY() * tangent.y;
+
+        if (targetAxis != 0f) {
+            boolean movingUphill = (targetAxis > 0f && tangent.y > 0f) || (targetAxis < 0f && tangent.y < 0f);
+            float uphillPenalty = movingUphill ? speedLimit * config.getSlopeResistance() * Math.abs(tangent.y) : 0f;
+            float targetSpeed = targetAxis * Math.max(0f, speedLimit - uphillPenalty);
+            tangentSpeed = approach(tangentSpeed, targetSpeed, config.getMoveAcceleration() * delta);
+            model.setFacingDirection(targetAxis < 0f ? FacingDirection.LEFT : FacingDirection.RIGHT);
+        } else {
+            float effectiveDeceleration = config.getGroundDeceleration() * activeGroundFriction;
+            tangentSpeed = approach(tangentSpeed, 0f, effectiveDeceleration * delta);
+        }
+
+        model.setVelocityX(tangent.x * tangentSpeed);
+        model.setVelocityY(tangent.y * tangentSpeed);
+        model.setX(model.getX() + model.getVelocityX() * delta);
+        model.setY(model.getY() + model.getVelocityY() * delta);
+        clampToArena();
+
+        refreshGroundContacts();
+        if (grounded) {
+            alignToGround(delta, false);
+            return;
+        }
+
+        smoothAirborneRotation(delta);
+    }
+
     public void applyHorizontalMovement(float delta, float acceleration, float deceleration) {
         float targetAxis = getMoveAxis();
         float speedLimit = crouching ? config.getMaxMoveSpeed() * config.getCrouchSpeedMultiplier() : config.getMaxMoveSpeed();
@@ -105,25 +163,33 @@ public class TankController {
         model.setX(model.getX() + model.getVelocityX() * delta);
         model.setY(model.getY() + model.getVelocityY() * delta);
         clampToArena();
-    }
+        refreshGroundContacts();
 
-    public void integrateHorizontal(float delta) {
-        model.setX(model.getX() + model.getVelocityX() * delta);
-        clampToArena();
+        if (grounded) {
+            alignToGround(delta, false);
+            return;
+        }
+
+        smoothAirborneRotation(delta);
     }
 
     public void snapToGround() {
-        model.setY(config.getGroundY());
-        model.setVelocityY(0f);
+        refreshGroundContacts();
+        if (!grounded) {
+            return;
+        }
+        alignToGround(1f, true);
     }
 
     public void launchJump() {
+        detachFromGroundRemaining = 0.12f;
         model.setVelocityY(config.getJumpVelocity());
         lastAction = "Jump ignited";
     }
 
     public void launchWallJump() {
         float horizontalSign = isTouchingLeftWall() ? 1f : -1f;
+        detachFromGroundRemaining = 0.12f;
         model.setVelocityX(horizontalSign * config.getWallJumpHorizontalVelocity());
         model.setVelocityY(config.getJumpVelocity() * 0.92f);
         model.setFacingDirection(horizontalSign > 0f ? FacingDirection.RIGHT : FacingDirection.LEFT);
@@ -144,17 +210,21 @@ public class TankController {
     public void beginDashMotion() {
         float axis = getMoveAxis();
         float dashDirection = axis != 0f ? axis : model.getFacingDirection().sign();
-        model.setVelocityX(dashDirection * config.getDashSpeed());
-        model.setVelocityY(0f);
+        Vector2 impulse = buildGroundAwareImpulse(dashDirection * config.getDashSpeed());
+        model.setVelocityX(impulse.x);
+        model.setVelocityY(impulse.y);
     }
 
     public void endDashMotion() {
         model.setVelocityX(model.getVelocityX() * 0.35f);
+        model.setVelocityY(model.getVelocityY() * 0.35f);
     }
 
     public void performRamImpulse() {
         float ramDirection = model.getFacingDirection().sign();
-        model.setVelocityX(ramDirection * config.getRamImpulse());
+        Vector2 impulse = buildGroundAwareImpulse(ramDirection * config.getRamImpulse());
+        model.setVelocityX(impulse.x);
+        model.setVelocityY(impulse.y);
         lastAction = "Ram burst committed";
     }
 
@@ -175,7 +245,7 @@ public class TankController {
     }
 
     public boolean isGrounded() {
-        return model.getY() <= config.getGroundY() + 0.001f;
+        return grounded;
     }
 
     public boolean isTouchingLeftWall() {
@@ -187,7 +257,7 @@ public class TankController {
     }
 
     public boolean isEligibleForWallSlide() {
-        return !isGrounded()
+        return !grounded
             && model.getVelocityY() < 0f
             && ((isTouchingLeftWall() && getMoveAxis() < 0f) || (isTouchingRightWall() && getMoveAxis() > 0f));
     }
@@ -228,12 +298,154 @@ public class TankController {
         return model.getFacingDirection();
     }
 
+    public Vector2 getLeftTrackProbe() {
+        return new Vector2(leftTrackProbe);
+    }
+
+    public Vector2 getRightTrackProbe() {
+        return new Vector2(rightTrackProbe);
+    }
+
+    public TerrainContactInfo getLeftTrackContact() {
+        return leftTrackContact;
+    }
+
+    public TerrainContactInfo getRightTrackContact() {
+        return rightTrackContact;
+    }
+
+    public Vector2 getAverageContactPoint() {
+        return new Vector2(averageContactPoint);
+    }
+
+    public Vector2 getAverageSurfaceNormal() {
+        return new Vector2(averageSurfaceNormal);
+    }
+
+    public Vector2 getAverageSurfaceTangent() {
+        return new Vector2(averageSurfaceTangent);
+    }
+
+    public float getSurfaceAngle() {
+        return surfaceAngle;
+    }
+
+    public float getTargetTankRotation() {
+        return targetTankRotation;
+    }
+
     private void registerStates() {
         states.put(TankControlStateId.GROUNDED, new GroundedState());
         states.put(TankControlStateId.AIRBORNE, new AirborneState());
         states.put(TankControlStateId.WALL_SLIDE, new WallSlideState());
         states.put(TankControlStateId.DASH, new DashState());
         states.put(TankControlStateId.STUNNED, new StunnedState());
+    }
+
+    private void refreshGroundContacts() {
+        updateProbePositions();
+
+        leftTrackContact = terrainCollisionProvider.findGroundBelow(leftTrackProbe, config.getProbeDistance());
+        rightTrackContact = terrainCollisionProvider.findGroundBelow(rightTrackProbe, config.getProbeDistance());
+
+        boolean leftGrounded = leftTrackContact.isGrounded();
+        boolean rightGrounded = rightTrackContact.isGrounded();
+        boolean computedGrounded = leftGrounded || rightGrounded;
+
+        if (detachFromGroundRemaining > 0f) {
+            computedGrounded = false;
+        }
+        if (currentState != null && currentState.getId() != TankControlStateId.GROUNDED && model.getVelocityY() > 0f) {
+            computedGrounded = false;
+        }
+
+        grounded = computedGrounded;
+        if (!grounded) {
+            averageContactPoint.set((leftTrackProbe.x + rightTrackProbe.x) * 0.5f, model.getY() - config.getTrackToBodyOffset());
+            averageSurfaceNormal.set(0f, 1f);
+            averageSurfaceTangent.set(1f, 0f);
+            surfaceAngle = 0f;
+            targetTankRotation = 0f;
+            activeGroundFriction = 1f;
+            return;
+        }
+
+        if (leftGrounded && rightGrounded) {
+            averageContactPoint.set(
+                (leftTrackContact.getContactPoint().x + rightTrackContact.getContactPoint().x) * 0.5f,
+                (leftTrackContact.getContactPoint().y + rightTrackContact.getContactPoint().y) * 0.5f
+            );
+            averageSurfaceNormal.set(leftTrackContact.getSurfaceNormal()).add(rightTrackContact.getSurfaceNormal()).nor();
+            averageSurfaceTangent.set(leftTrackContact.getSurfaceTangent()).add(rightTrackContact.getSurfaceTangent());
+            if (averageSurfaceTangent.isZero(0.001f)) {
+                averageSurfaceTangent.set(rightTrackContact.getContactPoint()).sub(leftTrackContact.getContactPoint()).nor();
+            } else {
+                averageSurfaceTangent.nor();
+            }
+            if (averageSurfaceTangent.x < 0f) {
+                averageSurfaceTangent.scl(-1f);
+            }
+            surfaceAngle = MathUtils.atan2(
+                rightTrackContact.getContactPoint().y - leftTrackContact.getContactPoint().y,
+                rightTrackContact.getContactPoint().x - leftTrackContact.getContactPoint().x
+            ) * MathUtils.radiansToDegrees;
+            targetTankRotation = surfaceAngle;
+            activeGroundFriction = (leftTrackContact.getFriction() + rightTrackContact.getFriction()) * 0.5f;
+            return;
+        }
+
+        TerrainContactInfo contact = leftGrounded ? leftTrackContact : rightTrackContact;
+        averageContactPoint.set(contact.getContactPoint());
+        averageSurfaceNormal.set(contact.getSurfaceNormal());
+        averageSurfaceTangent.set(contact.getSurfaceTangent());
+        if (averageSurfaceTangent.x < 0f) {
+            averageSurfaceTangent.scl(-1f);
+        }
+        surfaceAngle = contact.getSurfaceAngle();
+        targetTankRotation = surfaceAngle;
+        activeGroundFriction = contact.getFriction();
+    }
+
+    private void updateProbePositions() {
+        float probeY = model.getY() + config.getProbeStartHeight();
+        leftTrackProbe.set(model.getX() + config.getProbeInset(), probeY);
+        rightTrackProbe.set(model.getX() + model.getWidth() - config.getProbeInset(), probeY);
+    }
+
+    private void alignToGround(float delta, boolean immediate) {
+        float snapAlpha = immediate ? 1f : Math.min(1f, config.getSnapToGroundSmoothing() * delta);
+        float rotationAlpha = immediate ? 1f : Math.min(1f, config.getRotationSmoothing() * delta);
+        float targetBodyY = averageContactPoint.y + config.getTrackToBodyOffset();
+
+        model.setY(MathUtils.lerp(model.getY(), targetBodyY, snapAlpha));
+        model.setRotationDegrees(MathUtils.lerpAngleDeg(model.getRotationDegrees(), targetTankRotation, rotationAlpha));
+
+        if (currentState == null || currentState.getId() != TankControlStateId.GROUNDED) {
+            model.setVelocityY(0f);
+        }
+    }
+
+    private void smoothAirborneRotation(float delta) {
+        float rotationAlpha = Math.min(1f, config.getRotationSmoothing() * 0.35f * delta);
+        model.setRotationDegrees(MathUtils.lerpAngleDeg(model.getRotationDegrees(), 0f, rotationAlpha));
+    }
+
+    private Vector2 resolveGroundMovementTangent() {
+        Vector2 tangent = new Vector2(averageSurfaceTangent);
+        if (tangent.isZero(0.001f)) {
+            tangent.set(1f, 0f);
+        }
+        if (tangent.x < 0f) {
+            tangent.scl(-1f);
+        }
+        return tangent.nor();
+    }
+
+    private Vector2 buildGroundAwareImpulse(float signedMagnitude) {
+        if (!grounded) {
+            return new Vector2(signedMagnitude, 0f);
+        }
+        return resolveGroundMovementTangent().scl(signedMagnitude);
     }
 
     private float getMoveAxis() {
@@ -244,12 +456,12 @@ public class TankController {
     }
 
     private void clampToArena() {
-        float clampedX = Math.max(0f, Math.min(model.getX(), config.getWorldWidth() - model.getWidth()));
-        model.setX(clampedX);
-
-        if (model.getY() <= config.getGroundY()) {
-            model.setY(config.getGroundY());
-            model.setVelocityY(0f);
+        if (model.getX() < 0f) {
+            model.setX(0f);
+            model.setVelocityX(Math.max(0f, model.getVelocityX()));
+        } else if (model.getX() + model.getWidth() > config.getWorldWidth()) {
+            model.setX(config.getWorldWidth() - model.getWidth());
+            model.setVelocityX(Math.min(0f, model.getVelocityX()));
         }
     }
 
