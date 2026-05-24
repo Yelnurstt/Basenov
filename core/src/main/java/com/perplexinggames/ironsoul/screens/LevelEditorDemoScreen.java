@@ -1,5 +1,5 @@
 package com.perplexinggames.ironsoul.screens;
-
+import com.perplexinggames.ironsoul.entities.Enemy;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
@@ -40,6 +40,8 @@ public class LevelEditorDemoScreen implements Screen {
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
+    private Enemy enemy;
+    private float damageCooldown = 0f;
     private EditorSideMenu editorSideMenu;
     private InputMultiplexer inputMultiplexer;
 
@@ -69,9 +71,9 @@ public class LevelEditorDemoScreen implements Screen {
 
         float tileSize = runtimeLevel.getTileSize();
         tank = new PhysicsTank(tileSize * 2f, getInitialTankSpawnY(tileSize), new RuntimeTerrainCollisionProvider(runtimeLevel));
-
+        enemy = new Enemy(700, 300, 40, 40);
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
-        
+
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
 
@@ -110,6 +112,7 @@ public class LevelEditorDemoScreen implements Screen {
         batch.setProjectionMatrix(worldCamera.combined);
         batch.begin();
         tank.render(batch);
+        enemy.render(batch);
         batch.end();
 
         renderOverlay();
@@ -155,6 +158,7 @@ public class LevelEditorDemoScreen implements Screen {
         }
         batch.dispose();
         font.dispose();
+        enemy.dispose();
         levelRenderer.dispose();
         tank.dispose();
         if (editorSideMenu != null) {
@@ -179,9 +183,30 @@ public class LevelEditorDemoScreen implements Screen {
 
     private void updateGameplay(float delta) {
         tank.update(delta);
+        enemy.update(delta);
+
+        if (damageCooldown > 0f) {
+            damageCooldown -= delta;
+        }
         centerCameraOnTank();
         clampCameraToLevelBounds();
         worldCamera.update();
+        if (!enemy.isDead()
+            && tank.getBounds().overlaps(enemy.getBounds())
+            && damageCooldown <= 0f) {
+
+            damageCooldown = 1f;
+
+            System.out.println("Tank damaged by enemy!");
+
+            enemy.takeDamage(10f);
+
+            System.out.println("Enemy HP: " + enemy.getHealth());
+
+            if (enemy.isDead()) {
+                System.out.println("ENEMY DEAD");
+            }
+        }
     }
 
     private void centerCameraOnTank() {

@@ -154,4 +154,12 @@ public class PhysicsTank {
         tracksTex.dispose();
         turretTex.dispose();
     }
+    public com.badlogic.gdx.math.Rectangle getBounds() {
+        return new com.badlogic.gdx.math.Rectangle(
+            physics.x - 32,
+            physics.y - 16,
+            64,
+            32
+        );
+    }
 }
