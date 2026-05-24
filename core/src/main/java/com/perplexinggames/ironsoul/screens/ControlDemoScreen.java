@@ -42,12 +42,19 @@ import com.perplexinggames.ironsoul.tank.combat.ShieldSystem;
 import com.perplexinggames.ironsoul.tank.combat.WeaponSystem;
 import com.perplexinggames.ironsoul.tank.controller.TankController;
 import com.perplexinggames.ironsoul.tank.controller.TankModel;
+import com.perplexinggames.ironsoul.terrain.SegmentTerrainCollisionProvider;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionBuilder;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionData;
+import com.perplexinggames.ironsoul.terrain.TerrainDebugRenderer;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 
 public class ControlDemoScreen implements Screen {
-    private static final float WORLD_WIDTH = 40f;
-    private static final float WORLD_HEIGHT = 22.5f;
+    private static final float WORLD_WIDTH = 1000f;
+    private static final float WORLD_HEIGHT = 320f;
 
     private OrthographicCamera camera;
     private FitViewport viewport;
@@ -68,7 +75,10 @@ public class ControlDemoScreen implements Screen {
     private GameInputCoordinator inputCoordinator;
     private ActionBindingProfile<KeyboardControl> keyboardBindings;
     private TankDebugRenderer tankDebugRenderer;
+    private TerrainDebugRenderer terrainDebugRenderer;
     private DebugHud debugHud;
+    private TerrainPath terrainPath;
+    private TerrainCollisionData terrainCollisionData;
 
     @Override
     public void show() {
@@ -81,6 +91,7 @@ public class ControlDemoScreen implements Screen {
         font = new BitmapFont();
         font.getData().setScale(1f);
         tankDebugRenderer = new TankDebugRenderer();
+        terrainDebugRenderer = new TerrainDebugRenderer();
         hudViewport.update(com.badlogic.gdx.Gdx.graphics.getWidth(), com.badlogic.gdx.Gdx.graphics.getHeight(), true);
 
         initializeDemo();
@@ -94,9 +105,16 @@ public class ControlDemoScreen implements Screen {
         interactionSystem = new InteractionSystem(dialogueSystem, gameStateManager);
         interactionSystem.setDialogueEnabled(false);
 
+        terrainPath = createDemoTerrainPath();
+        terrainCollisionData = new TerrainCollisionBuilder().build(terrainPath);
         TankMovementConfig movementConfig = TankMovementConfig.demoDefault(WORLD_WIDTH);
-        TankModel tankModel = new TankModel(6f, movementConfig.getGroundY(), 2.6f, 1.6f);
-        tankController = new TankController(tankModel, movementConfig);
+        TankModel tankModel = new TankModel(60f, 150f, 58f, 28f);
+        tankController = new TankController(
+            tankModel,
+            movementConfig,
+            new SegmentTerrainCollisionProvider(Arrays.asList(terrainCollisionData))
+        );
+        tankController.snapToGround();
         projectileSystem = new ProjectileSystem(WORLD_WIDTH, WORLD_HEIGHT);
         weaponSystem = new WeaponSystem(tankController, projectileSystem);
         shieldSystem = new ShieldSystem(tankController);
@@ -176,18 +194,30 @@ public class ControlDemoScreen implements Screen {
 
     private void renderWorld() {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(new Color(0.13f, 0.15f, 0.17f, 1f));
+        shapeRenderer.setColor(new Color(0.08f, 0.1f, 0.13f, 1f));
         shapeRenderer.rect(0f, 0f, WORLD_WIDTH, WORLD_HEIGHT);
-
-        shapeRenderer.setColor(new Color(0.18f, 0.21f, 0.24f, 1f));
-        shapeRenderer.rect(0f, 0f, WORLD_WIDTH, 2f);
-        shapeRenderer.rect(14f, 6.5f, 6f, 0.6f);
-        shapeRenderer.rect(27f, 10f, 5f, 0.6f);
-
-        shapeRenderer.setColor(new Color(0.31f, 0.34f, 0.38f, 1f));
-        shapeRenderer.rect(0f, 0f, 0.5f, WORLD_HEIGHT);
-        shapeRenderer.rect(WORLD_WIDTH - 0.5f, 0f, 0.5f, WORLD_HEIGHT);
         shapeRenderer.end();
+
+        terrainDebugRenderer.render(shapeRenderer, terrainPath, terrainCollisionData);
+    }
+
+    private TerrainPath createDemoTerrainPath() {
+        return new TerrainPath(
+            "control-demo-terrain",
+            Arrays.asList(
+                new TerrainPoint("p0", 0f, 100f),
+                new TerrainPoint("p1", 200f, 100f),
+                new TerrainPoint("p2", 350f, 180f),
+                new TerrainPoint("p3", 550f, 180f),
+                new TerrainPoint("p4", 700f, 80f),
+                new TerrainPoint("p5", 850f, 80f),
+                new TerrainPoint("p6", 1000f, 220f)
+            ),
+            TerrainPath.CurveType.LINEAR,
+            "demo-dirt",
+            5f,
+            1f
+        );
     }
 
     private void renderOverlayTint() {

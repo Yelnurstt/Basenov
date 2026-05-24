@@ -54,14 +54,37 @@ public class DebugHud {
         draw(batch, "Global state: " + gameStateManager.getCurrentState().getName(), x, y - line * 2f);
         draw(batch, "Tank state: " + formatTankState(tankController), x, y - line * 3f);
         draw(batch, "Velocity: " + String.format(Locale.US, "x=%.2f y=%.2f", model.getVelocityX(), model.getVelocityY()), x, y - line * 4f);
-        draw(batch, "Grounded: " + tankController.isGrounded() + " | Facing: " + tankController.getFacingDirection(), x, y - line * 5f);
+        draw(
+            batch,
+            String.format(
+                Locale.US,
+                "Grounded: %s | Facing: %s | Angle: %.1f/%.1f",
+                tankController.isGrounded(),
+                tankController.getFacingDirection(),
+                model.getRotationDegrees(),
+                tankController.getSurfaceAngle()
+            ),
+            x,
+            y - line * 5f
+        );
         draw(batch, "Last command: " + inputCoordinator.getLastExecutedCommand(), x, y - line * 6f);
         draw(batch, "Last tank action: " + tankController.getLastAction(), x, y - line * 7f);
         draw(batch, "Weapon: " + weaponSystem.getLastCombatAction(), x, y - line * 8f);
         draw(batch, "Charging: " + weaponSystem.isCharging() + " (" + String.format(Locale.US, "%.2fs", weaponSystem.getChargeTime()) + ")", x, y - line * 9f);
         draw(batch, "Projectiles: " + projectileSystem.getActiveProjectileCount(), x, y - line * 10f);
         draw(batch, "Interact: " + interactionSystem.getLastInteraction(), x, y - line * 11f);
-        draw(batch, "Overlay: " + overlayController.getLastOverlayAction(), x, y - line * 12f);
+        draw(
+            batch,
+            String.format(
+                Locale.US,
+                "Overlay: %s | Contacts: L=%s R=%s",
+                overlayController.getLastOverlayAction(),
+                tankController.getLeftTrackContact().isGrounded(),
+                tankController.getRightTrackContact().isGrounded()
+            ),
+            x,
+            y - line * 12f
+        );
 
         draw(batch, formatBindingLine("Move Left", InputAction.MOVE_LEFT), x, y - line * 14f);
         draw(batch, formatBindingLine("Move Right", InputAction.MOVE_RIGHT), x, y - line * 15f);

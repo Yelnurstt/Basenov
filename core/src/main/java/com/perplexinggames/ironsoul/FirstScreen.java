@@ -46,7 +46,13 @@ import com.perplexinggames.ironsoul.tank.controller.AimDirection;
 import com.perplexinggames.ironsoul.tank.controller.TankController;
 import com.perplexinggames.ironsoul.tank.controller.TankModel;
 import com.perplexinggames.ironsoul.tank.controller.TankPhysicsConfig;
+import com.perplexinggames.ironsoul.terrain.SegmentTerrainCollisionProvider;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionBuilder;
+import com.perplexinggames.ironsoul.terrain.TerrainCollisionData;
+import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Locale;
 
@@ -96,7 +102,25 @@ public class FirstScreen implements Screen {
 
         TankPhysicsConfig physicsConfig = TankPhysicsConfig.defaultConfig();
         TankModel tankModel = new TankModel(6f, physicsConfig.getGroundY(), 2.6f, 1.6f);
-        tankController = new TankController(tankModel, physicsConfig);
+        TerrainCollisionData flatTerrain = new TerrainCollisionBuilder().build(
+            new TerrainPath(
+                "first-screen-flat",
+                Arrays.asList(
+                    new TerrainPoint("a", 0f, physicsConfig.getGroundY()),
+                    new TerrainPoint("b", WORLD_WIDTH, physicsConfig.getGroundY())
+                ),
+                TerrainPath.CurveType.LINEAR,
+                "flat-demo",
+                0.18f,
+                1f
+            )
+        );
+        tankController = new TankController(
+            tankModel,
+            physicsConfig,
+            new SegmentTerrainCollisionProvider(Arrays.asList(flatTerrain))
+        );
+        tankController.snapToGround();
         weaponSystem = new WeaponSystem(tankController);
         shieldSystem = new ShieldSystem(tankController);
 
