@@ -114,42 +114,51 @@ public class EditorSideMenu {
         rootTable.align(Align.left | Align.top);
         stage.addActor(rootTable);
 
-        Table frame = new Table();
-        frame.setBackground(skin.newDrawable("white", new Color(0.07f, 0.11f, 0.15f, 0.96f)));
-        frame.pad(10f);
-        frame.top();
+        // --- Top Toolbar ---
+        Table topToolbar = new Table();
+        topToolbar.setBackground(skin.newDrawable("white", new Color(0.12f, 0.18f, 0.24f, 1f)));
+        topToolbar.pad(5f);
+        
+        Label titleLabel = new Label("Iron Soul Editor", skin, "subtitle");
+        topToolbar.add(titleLabel).left().padRight(20f);
 
-        Table header = new Table();
-        header.setBackground(skin.newDrawable("white", new Color(0.12f, 0.18f, 0.24f, 1f)));
-        header.pad(8f, 10f, 8f, 10f);
+        TextButton saveBtn = new TextButton("Save", skin);
+        saveBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.executeCommand(new com.perplexinggames.ironsoul.editor.command.SaveLevelCommand(levelEditor)); } });
+        TextButton loadBtn = new TextButton("Load", skin);
+        loadBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.executeCommand(new com.perplexinggames.ironsoul.editor.command.LoadLevelCommand(levelEditor)); } });
+        TextButton playBtn = new TextButton("Play [F1]", skin);
+        playBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.setMode(EditorMode.GAMEPLAY); } });
+        TextButton stopBtn = new TextButton("Stop [F2]", skin);
+        stopBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.setMode(EditorMode.EDITOR); } });
+        TextButton snapBtn = new TextButton("Grid Snap", skin, "toggle");
+        snapBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.getSnapService().setEnabled(snapBtn.isChecked()); } });
 
-        Label titleLabel = new Label("World Editor", skin, "subtitle");
-        titleLabel.setAlignment(Align.left);
-        Label subtitleLabel = new Label("Blocks, gates, spawns and world flow", skin);
-        subtitleLabel.setColor(new Color(0.75f, 0.84f, 0.92f, 1f));
-        subtitleLabel.setFontScale(0.9f);
-
-        Table titleStack = new Table();
-        titleStack.add(titleLabel).left().row();
-        titleStack.add(subtitleLabel).left().padTop(2f);
-
-        TextButton closeButton = new TextButton("Hide [F3]", skin);
+        topToolbar.add(saveBtn).padRight(5f);
+        topToolbar.add(loadBtn).padRight(15f);
+        topToolbar.add(playBtn).padRight(5f);
+        topToolbar.add(stopBtn).padRight(15f);
+        topToolbar.add(snapBtn).padRight(5f);
+        topToolbar.add().expandX();
+        
+        TextButton closeButton = new TextButton("Hide UI [F3]", skin);
         closeButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 setMenuVisible(false);
             }
         });
+        topToolbar.add(closeButton).right();
 
-        header.add(titleStack).expandX().fillX().left().padRight(8f);
-        header.add(closeButton).width(96f).right();
-        frame.add(header).expandX().fillX().padBottom(8f).row();
+        rootTable.add(topToolbar).expandX().fillX().colspan(3).row();
 
-        Table content = new Table();
-        content.top();
+        // --- Left Tool Palette ---
+        Table leftPalette = new Table();
+        leftPalette.setBackground(skin.newDrawable("white", new Color(0.07f, 0.11f, 0.15f, 0.96f)));
+        leftPalette.top().pad(10f);
 
-        Table toolPanel = createSection("Tools");
-        int column = 0;
+        Label toolTitle = new Label("Tools", skin, "subtitle");
+        leftPalette.add(toolTitle).padBottom(10f).row();
+
         for (ToolButtonData data : toolDataList) {
             String buttonText = data.label + (data.hotkey != null ? " [" + data.hotkey + "]" : "");
             TextButton button = new TextButton(buttonText, skin, "toggle");
@@ -169,66 +178,69 @@ public class EditorSideMenu {
                 }
             });
             buttonGroup.add(button);
-            toolPanel.add(button).width(126f).height(34f).pad(0f, column == 0 ? 0f : 4f, 6f, column == 0 ? 4f : 0f);
-            column++;
-            if (column == 2) {
-                toolPanel.row();
-                column = 0;
-            }
+            leftPalette.add(button).width(120f).height(34f).padBottom(4f).row();
         }
-        if (column != 0) {
-            toolPanel.row();
-        }
-        content.add(toolPanel).expandX().fillX().padBottom(8f).row();
+        rootTable.add(leftPalette).width(140f).expandY().fillY();
 
-        content.add(buildBlockPanel()).expandX().fillX().padBottom(8f).row();
-        content.add(buildSplinePanel()).expandX().fillX().padBottom(8f).row();
-        content.add(buildGatePanel()).expandX().fillX().padBottom(8f).row();
+        // --- Center Viewport (Empty) ---
+        Table centerViewport = new Table();
+        rootTable.add(centerViewport).expand().fill();
 
-        Table infoTable = createSection("Session");
+        // --- Right Inspector ---
+        Table rightInspector = new Table();
+        rightInspector.setBackground(skin.newDrawable("white", new Color(0.07f, 0.11f, 0.15f, 0.96f)));
+        rightInspector.top().pad(10f);
+
+        Table inspectorContent = new Table();
+        inspectorContent.top();
+
+        inspectorContent.add(buildBlockPanel()).expandX().fillX().padBottom(8f).row();
+        inspectorContent.add(buildSplinePanel()).expandX().fillX().padBottom(8f).row();
+        inspectorContent.add(buildGatePanel()).expandX().fillX().padBottom(8f).row();
+
+        ScrollPane inspectorScroll = new ScrollPane(inspectorContent, skin);
+        inspectorScroll.setFadeScrollBars(false);
+        inspectorScroll.setScrollingDisabled(true, false);
+        rightInspector.add(inspectorScroll).expand().fill();
+
+        rootTable.add(rightInspector).width(320f).expandY().fillY().row();
+
+        // --- Bottom Status Bar ---
+        Table bottomStatusBar = new Table();
+        bottomStatusBar.setBackground(skin.newDrawable("white", new Color(0.12f, 0.18f, 0.24f, 1f)));
+        bottomStatusBar.pad(5f, 10f, 5f, 10f);
+
         modeLabel = new Label("Mode: -", skin);
         toolLabel = new Label("Tool: -", skin);
         hintLabel = new Label("Hint: -", skin);
-        hintLabel.setWrap(true);
         validationLabel = new Label("Validation: -", skin);
-        validationLabel.setWrap(true);
-        Label footerHint = new Label("F3 hides the menu. F1/F2 switch runtime and editor.", skin);
-        footerHint.setWrap(true);
-        footerHint.setColor(new Color(0.73f, 0.82f, 0.9f, 1f));
 
-        infoTable.add(modeLabel).align(Align.left).row();
-        infoTable.add(toolLabel).align(Align.left).row();
-        infoTable.add(hintLabel).align(Align.left).width(234f).padTop(8f).row();
-        infoTable.add(validationLabel).align(Align.left).width(234f).padTop(8f).row();
-        infoTable.add(footerHint).align(Align.left).width(234f).padTop(10f).row();
-        content.add(infoTable).expandX().fillX().row();
+        bottomStatusBar.add(modeLabel).padRight(15f);
+        bottomStatusBar.add(toolLabel).padRight(15f);
+        bottomStatusBar.add(hintLabel).expandX().left();
+        bottomStatusBar.add(validationLabel).right();
 
-        ScrollPane scrollPane = new ScrollPane(content, skin);
-        scrollPane.setFadeScrollBars(false);
-        scrollPane.setScrollingDisabled(true, false);
-        frame.add(scrollPane).width(300f).expand().fill().row();
+        rootTable.add(bottomStatusBar).expandX().fillX().colspan(3);
 
-        rootTable.add(frame).width(320f).expandY().fillY().pad(10f);
-
-        blockSelect = (SelectBox<String>) content.findActor("blockSelect");
-        blockIdField = (TextField) content.findActor("blockIdField");
-        blockNameField = (TextField) content.findActor("blockNameField");
-        blockWidthField = (TextField) content.findActor("blockWidthField");
-        blockHeightField = (TextField) content.findActor("blockHeightField");
-        splineSelect = (SelectBox<String>) content.findActor("splineSelect");
-        splineLayerSelect = (SelectBox<String>) content.findActor("splineLayerSelect");
-        splineCurveSelect = (SelectBox<String>) content.findActor("splineCurveSelect");
-        splineTileModeSelect = (SelectBox<String>) content.findActor("splineTileModeSelect");
-        splineNameField = (TextField) content.findActor("splineNameField");
-        splineSpriteField = (TextField) content.findActor("splineSpriteField");
-        splineDepthField = (TextField) content.findActor("splineDepthField");
-        splineParallaxField = (TextField) content.findActor("splineParallaxField");
-        splineWidthField = (TextField) content.findActor("splineWidthField");
-        splineOffsetField = (TextField) content.findActor("splineOffsetField");
-        splineThicknessField = (TextField) content.findActor("splineThicknessField");
-        splineSelectionLabel = (Label) content.findActor("splineSelectionLabel");
-        selectedGateLabel = (Label) content.findActor("selectedGateLabel");
-        selectedSpawnLabel = (Label) content.findActor("selectedSpawnLabel");
+        blockSelect = (SelectBox<String>) inspectorContent.findActor("blockSelect");
+        blockIdField = (TextField) inspectorContent.findActor("blockIdField");
+        blockNameField = (TextField) inspectorContent.findActor("blockNameField");
+        blockWidthField = (TextField) inspectorContent.findActor("blockWidthField");
+        blockHeightField = (TextField) inspectorContent.findActor("blockHeightField");
+        splineSelect = (SelectBox<String>) inspectorContent.findActor("splineSelect");
+        splineLayerSelect = (SelectBox<String>) inspectorContent.findActor("splineLayerSelect");
+        splineCurveSelect = (SelectBox<String>) inspectorContent.findActor("splineCurveSelect");
+        splineTileModeSelect = (SelectBox<String>) inspectorContent.findActor("splineTileModeSelect");
+        splineNameField = (TextField) inspectorContent.findActor("splineNameField");
+        splineSpriteField = (TextField) inspectorContent.findActor("splineSpriteField");
+        splineDepthField = (TextField) inspectorContent.findActor("splineDepthField");
+        splineParallaxField = (TextField) inspectorContent.findActor("splineParallaxField");
+        splineWidthField = (TextField) inspectorContent.findActor("splineWidthField");
+        splineOffsetField = (TextField) inspectorContent.findActor("splineOffsetField");
+        splineThicknessField = (TextField) inspectorContent.findActor("splineThicknessField");
+        splineSelectionLabel = (Label) inspectorContent.findActor("splineSelectionLabel");
+        selectedGateLabel = (Label) inspectorContent.findActor("selectedGateLabel");
+        selectedSpawnLabel = (Label) inspectorContent.findActor("selectedSpawnLabel");
     }
 
     private Table buildBlockPanel() {

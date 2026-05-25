@@ -32,7 +32,7 @@ public class EditorInputAdapter extends InputAdapter {
     private final OrthographicCamera worldCamera;
     private final Vector3 tempScreenPosition;
     private boolean draggingLeftButton;
-    private boolean draggingMiddleButton;
+    private boolean draggingPanButton;
     private int lastDragGridX;
     private int lastDragGridY;
     private int lastPanScreenX;
@@ -146,8 +146,8 @@ public class EditorInputAdapter extends InputAdapter {
             return false;
         }
 
-        if (button == Input.Buttons.MIDDLE) {
-            draggingMiddleButton = true;
+        if (button == Input.Buttons.MIDDLE || button == Input.Buttons.RIGHT) {
+            draggingPanButton = true;
             lastPanScreenX = screenX;
             lastPanScreenY = screenY;
             return true;
@@ -172,7 +172,7 @@ public class EditorInputAdapter extends InputAdapter {
             return false;
         }
 
-        if (draggingMiddleButton) {
+        if (draggingPanButton) {
             panCameraByDrag(screenX, screenY);
             return true;
         }
@@ -196,8 +196,8 @@ public class EditorInputAdapter extends InputAdapter {
             return false;
         }
 
-        if (button == Input.Buttons.MIDDLE) {
-            draggingMiddleButton = false;
+        if (button == Input.Buttons.MIDDLE || button == Input.Buttons.RIGHT) {
+            draggingPanButton = false;
             return true;
         }
 

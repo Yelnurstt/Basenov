@@ -43,6 +43,8 @@ import com.perplexinggames.ironsoul.world.WorldValidationResult;
 import com.perplexinggames.ironsoul.world.WorldValidator;
 import com.perplexinggames.ironsoul.world.runtime.WorldSpawnResolver;
 import com.perplexinggames.ironsoul.world.serialization.WorldSerializer;
+import com.perplexinggames.ironsoul.editor.snap.EditorSnapService;
+import com.perplexinggames.ironsoul.editor.selection.SelectionService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -70,6 +72,8 @@ public class LevelEditor implements EditorToolController {
     private final EditorEventBus eventBus;
     private final EditorCommandHistory commandHistory;
     private final EditorToolContext toolContext;
+    private final EditorSnapService snapService;
+    private final SelectionService selectionService;
 
     private WorldData worldData;
     private WorldGraph worldGraph;
@@ -103,6 +107,8 @@ public class LevelEditor implements EditorToolController {
         this.eventBus = new EditorEventBus();
         this.commandHistory = new EditorCommandHistory();
         this.toolContext = new EditorToolContext(new PlaceBlockTool());
+        this.snapService = new EditorSnapService();
+        this.selectionService = new SelectionService();
         this.mode = EditorMode.GAMEPLAY;
         this.lastStatusMessage = "Ready";
         this.terrainSnapToGrid = false;
@@ -171,6 +177,14 @@ public class LevelEditor implements EditorToolController {
 
     public EditorToolContext getToolContext() {
         return toolContext;
+    }
+
+    public EditorSnapService getSnapService() {
+        return snapService;
+    }
+
+    public SelectionService getSelectionService() {
+        return selectionService;
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.perplexinggames.ironsoul.level.LevelRenderer;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.editor.render.EditorGridRenderer;
 import com.perplexinggames.ironsoul.world.GateData;
 import com.perplexinggames.ironsoul.world.WorldBlockData;
 import com.perplexinggames.ironsoul.world.WorldData;
@@ -42,6 +43,7 @@ public class LevelEditorDemoScreen implements Screen {
     private OrthographicCamera hudCamera;
     private RuntimeLevel runtimeLevel;
     private LevelRenderer levelRenderer;
+    private EditorGridRenderer gridRenderer;
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
@@ -69,6 +71,7 @@ public class LevelEditorDemoScreen implements Screen {
         WorldSerializer worldSerializer = new JsonWorldSerializer();
         runtimeLevel = new RuntimeLevel(new LevelData("bootstrap", "Bootstrap", 40, 30, 32));
         levelRenderer = new LevelRenderer();
+        gridRenderer = new EditorGridRenderer();
         levelEditor = new LevelEditor(runtimeLevel, worldSerializer);
 
         WorldData initialWorld = levelEditor.readWorldDataFromDefaultLocation();
@@ -127,6 +130,7 @@ public class LevelEditorDemoScreen implements Screen {
                 levelEditor.getSelectedSplinePathId(),
                 levelEditor.getSelectedSplinePointId()
             );
+            gridRenderer.render(levelEditor, worldCamera);
         } else {
             levelRenderer.renderGameplay(runtimeLevel, activeBlock, worldCamera);
         }
@@ -184,6 +188,7 @@ public class LevelEditorDemoScreen implements Screen {
         font.dispose();
         enemy.dispose();
         levelRenderer.dispose();
+        gridRenderer.dispose();
         tank.dispose();
         if (editorSideMenu != null) {
             editorSideMenu.dispose();
