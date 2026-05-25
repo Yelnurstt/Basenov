@@ -12,7 +12,13 @@ public class Enemy extends GameEntity {
     private final Texture texture;
 
     private final float damage = 10f;
+    private enum EnemyState {
+        IDLE,
+        ATTACK,
+        DEAD
+    }
 
+    private EnemyState state = EnemyState.IDLE;
     public Enemy(float x, float y, float width, float height) {
         super(x, y, 50f);
 
@@ -29,8 +35,11 @@ public class Enemy extends GameEntity {
     @Override
     public void update(float delta) {
         bounds.setPosition(x, y);
-    }
 
+        if (isDead()) {
+            state = EnemyState.DEAD;
+        }
+    }
     @Override
     public void render(SpriteBatch batch) {
         if (!isDead()) {
@@ -48,5 +57,13 @@ public class Enemy extends GameEntity {
 
     public void dispose() {
         texture.dispose();
+    }
+    public boolean canAttack() {
+        return state != EnemyState.DEAD;
+    }
+    public void setStateToAttack() {
+        if (!isDead()) {
+            state = EnemyState.ATTACK;
+        }
     }
 }

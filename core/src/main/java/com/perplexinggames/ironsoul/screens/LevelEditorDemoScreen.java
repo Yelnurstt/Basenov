@@ -209,9 +209,10 @@ public class LevelEditorDemoScreen implements Screen {
         clampCameraToLevelBounds();
         worldCamera.update();
         if (!enemy.isDead()
+            && enemy.canAttack()
             && tank.getBounds().overlaps(enemy.getBounds())
             && damageCooldown <= 0f) {
-
+            enemy.setStateToAttack();
             damageCooldown = 1f;
 
             System.out.println("Tank damaged by enemy!");
