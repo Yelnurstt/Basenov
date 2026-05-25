@@ -67,7 +67,6 @@ public class LevelRenderer {
 
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        drawBlocks(runtimeLevel);
         drawTerrainSegments(runtimeLevel);
         drawSpawnPoints(activeBlock);
         drawMarkers(activeBlock);

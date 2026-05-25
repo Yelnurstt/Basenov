@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.perplexinggames.ironsoul.editor.command.LoadLevelCommand;
 import com.perplexinggames.ironsoul.editor.command.SaveLevelCommand;
@@ -32,6 +33,7 @@ public class EditorInputAdapter extends InputAdapter {
 
     private final LevelEditor levelEditor;
     private final OrthographicCamera worldCamera;
+    private final Stage uiStage;
     private final Vector3 tempScreenPosition;
     private boolean draggingLeftButton;
     private boolean draggingPanButton;
@@ -40,9 +42,10 @@ public class EditorInputAdapter extends InputAdapter {
     private int lastPanScreenX;
     private int lastPanScreenY;
 
-    public EditorInputAdapter(LevelEditor levelEditor, OrthographicCamera worldCamera) {
+    public EditorInputAdapter(LevelEditor levelEditor, OrthographicCamera worldCamera, Stage uiStage) {
         this.levelEditor = levelEditor;
         this.worldCamera = worldCamera;
+        this.uiStage = uiStage;
         this.tempScreenPosition = new Vector3();
         this.lastDragGridX = Integer.MIN_VALUE;
         this.lastDragGridY = Integer.MIN_VALUE;
@@ -59,6 +62,9 @@ public class EditorInputAdapter extends InputAdapter {
             return true;
         }
         if (!levelEditor.isEditorMode()) {
+            return false;
+        }
+        if (isUiFocused()) {
             return false;
         }
 
@@ -268,6 +274,9 @@ public class EditorInputAdapter extends InputAdapter {
         if (!levelEditor.isEditorMode()) {
             return;
         }
+        if (isUiFocused()) {
+            return;
+        }
 
         float moveX = 0f;
         float moveY = 0f;
@@ -319,5 +328,9 @@ public class EditorInputAdapter extends InputAdapter {
         worldCamera.update();
         lastPanScreenX = screenX;
         lastPanScreenY = screenY;
+    }
+
+    private boolean isUiFocused() {
+        return uiStage != null && (uiStage.getKeyboardFocus() != null || uiStage.getScrollFocus() != null);
     }
 }

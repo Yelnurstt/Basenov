@@ -91,9 +91,9 @@ public class LevelEditorDemoScreen implements Screen {
             700,
             300
         );
-        editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
+        editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera, editorSideMenu.getStage());
 
         inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(editorSideMenu.getStage());

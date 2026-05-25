@@ -130,11 +130,13 @@ public class EditorSideMenu {
 
         // --- Top Toolbar ---
         Table topToolbar = new Table();
-        topToolbar.setBackground(skin.newDrawable("white", new Color(0.12f, 0.18f, 0.24f, 1f)));
-        topToolbar.pad(5f);
+        topToolbar.setBackground(skin.newDrawable("white", new Color(0.15f, 0.15f, 0.15f, 1f))); // Darker, neutral engine gray
+        topToolbar.pad(4f, 12f, 4f, 12f);
         
-        Label titleLabel = new Label("Iron Soul Editor", skin, "subtitle");
-        topToolbar.add(titleLabel).left().padRight(20f);
+        Label titleLabel = new Label("IRON SOUL EDITOR", skin, "subtitle");
+        titleLabel.setColor(Color.LIGHT_GRAY);
+        titleLabel.setFontScale(0.8f);
+        topToolbar.add(titleLabel).left().padRight(24f);
 
         TextButton saveBtn = new TextButton("Save", skin);
         saveBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.executeCommand(new com.perplexinggames.ironsoul.editor.command.SaveLevelCommand(levelEditor)); } });
@@ -147,11 +149,11 @@ public class EditorSideMenu {
         TextButton snapBtn = new TextButton("Grid Snap", skin, "toggle");
         snapBtn.addListener(new ChangeListener() { @Override public void changed(ChangeEvent e, Actor a) { levelEditor.getSnapService().setEnabled(snapBtn.isChecked()); } });
 
-        topToolbar.add(saveBtn).padRight(5f);
-        topToolbar.add(loadBtn).padRight(15f);
-        topToolbar.add(playBtn).padRight(5f);
-        topToolbar.add(stopBtn).padRight(15f);
-        topToolbar.add(snapBtn).padRight(5f);
+        topToolbar.add(saveBtn).width(70f).height(28f).padRight(6f);
+        topToolbar.add(loadBtn).width(70f).height(28f).padRight(20f);
+        topToolbar.add(playBtn).width(90f).height(28f).padRight(6f);
+        topToolbar.add(stopBtn).width(90f).height(28f).padRight(20f);
+        topToolbar.add(snapBtn).width(90f).height(28f).padRight(6f);
         topToolbar.add().expandX();
         
         TextButton closeButton = new TextButton("Hide UI [F3]", skin);
@@ -161,17 +163,19 @@ public class EditorSideMenu {
                 setMenuVisible(false);
             }
         });
-        topToolbar.add(closeButton).right();
+        topToolbar.add(closeButton).width(100f).height(28f).right();
 
-        rootTable.add(topToolbar).expandX().fillX().colspan(3).row();
+        rootTable.add(topToolbar).expandX().fillX().colspan(3).height(40f).row();
 
         // --- Left Tool Palette ---
         Table leftPalette = new Table();
-        leftPalette.setBackground(skin.newDrawable("white", new Color(0.07f, 0.11f, 0.15f, 0.96f)));
-        leftPalette.top().pad(10f);
+        leftPalette.setBackground(skin.newDrawable("white", new Color(0.12f, 0.12f, 0.12f, 1f)));
+        leftPalette.top().pad(8f);
 
-        Label toolTitle = new Label("Tools", skin, "subtitle");
-        leftPalette.add(toolTitle).padBottom(10f).row();
+        Label toolTitle = new Label("TOOLS", skin, "subtitle");
+        toolTitle.setColor(Color.LIGHT_GRAY);
+        toolTitle.setFontScale(0.75f);
+        leftPalette.add(toolTitle).left().padBottom(12f).row();
 
         for (ToolButtonData data : toolDataList) {
             String buttonText = data.label + (data.hotkey != null ? " [" + data.hotkey + "]" : "");
@@ -192,9 +196,9 @@ public class EditorSideMenu {
                 }
             });
             buttonGroup.add(button);
-            leftPalette.add(button).width(120f).height(34f).padBottom(4f).row();
+            leftPalette.add(button).expandX().fillX().height(32f).padBottom(4f).row();
         }
-        rootTable.add(leftPalette).width(140f).expandY().fillY();
+        rootTable.add(leftPalette).width(160f).expandY().fillY();
 
         // --- Center Viewport (Empty) ---
         Table centerViewport = new Table();
@@ -202,39 +206,49 @@ public class EditorSideMenu {
 
         // --- Right Inspector ---
         Table rightInspector = new Table();
-        rightInspector.setBackground(skin.newDrawable("white", new Color(0.07f, 0.11f, 0.15f, 0.96f)));
-        rightInspector.top().pad(10f);
+        rightInspector.setBackground(skin.newDrawable("white", new Color(0.12f, 0.12f, 0.12f, 1f)));
+        rightInspector.top().pad(8f);
+
+        Label inspectorTitle = new Label("INSPECTOR", skin, "subtitle");
+        inspectorTitle.setColor(Color.LIGHT_GRAY);
+        inspectorTitle.setFontScale(0.75f);
+        rightInspector.add(inspectorTitle).left().padBottom(12f).row();
 
         Table inspectorContent = new Table();
         inspectorContent.top();
 
-        inspectorContent.add(buildBlockPanel()).expandX().fillX().padBottom(8f).row();
-        inspectorContent.add(buildSplinePanel()).expandX().fillX().padBottom(8f).row();
-        inspectorContent.add(buildGatePanel()).expandX().fillX().padBottom(8f).row();
+        inspectorContent.add(buildBlockPanel()).expandX().fillX().padBottom(12f).row();
+        inspectorContent.add(buildSplinePanel()).expandX().fillX().padBottom(12f).row();
+        inspectorContent.add(buildGatePanel()).expandX().fillX().padBottom(12f).row();
 
         ScrollPane inspectorScroll = new ScrollPane(inspectorContent, skin);
         inspectorScroll.setFadeScrollBars(false);
         inspectorScroll.setScrollingDisabled(true, false);
         rightInspector.add(inspectorScroll).expand().fill();
 
-        rootTable.add(rightInspector).width(320f).expandY().fillY().row();
+        rootTable.add(rightInspector).width(340f).expandY().fillY().row();
 
         // --- Bottom Status Bar ---
         Table bottomStatusBar = new Table();
-        bottomStatusBar.setBackground(skin.newDrawable("white", new Color(0.12f, 0.18f, 0.24f, 1f)));
-        bottomStatusBar.pad(5f, 10f, 5f, 10f);
+        bottomStatusBar.setBackground(skin.newDrawable("white", new Color(0.1f, 0.1f, 0.1f, 1f)));
+        bottomStatusBar.pad(4f, 12f, 4f, 12f);
 
         modeLabel = new Label("Mode: -", skin);
+        modeLabel.setFontScale(0.8f);
         toolLabel = new Label("Tool: -", skin);
+        toolLabel.setFontScale(0.8f);
         hintLabel = new Label("Hint: -", skin);
+        hintLabel.setFontScale(0.8f);
+        hintLabel.setColor(Color.LIGHT_GRAY);
         validationLabel = new Label("Validation: -", skin);
+        validationLabel.setFontScale(0.8f);
 
-        bottomStatusBar.add(modeLabel).padRight(15f);
-        bottomStatusBar.add(toolLabel).padRight(15f);
+        bottomStatusBar.add(modeLabel).padRight(20f);
+        bottomStatusBar.add(toolLabel).padRight(20f);
         bottomStatusBar.add(hintLabel).expandX().left();
         bottomStatusBar.add(validationLabel).right();
 
-        rootTable.add(bottomStatusBar).expandX().fillX().colspan(3);
+        rootTable.add(bottomStatusBar).expandX().fillX().colspan(3).height(30f);
 
         blockSelect = (SelectBox<String>) inspectorContent.findActor("blockSelect");
         blockIdField = (TextField) inspectorContent.findActor("blockIdField");
