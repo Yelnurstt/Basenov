@@ -83,6 +83,13 @@ public class EditorSideMenu {
     private List<String> lastBlockIds = List.of();
     private List<String> lastSplineIds = List.of();
     private List<String> lastSplineLayerIds = List.of();
+    private String lastSplinePathSelectionId;
+    private String lastSplineLayerSelectionId;
+    private String lastSplinePointSelectionId;
+    private boolean syncingSplineDrafts;
+    private boolean splineCurveDirty;
+    private boolean splineTileModeDirty;
+    private boolean splineHandleModeDirty;
     private boolean menuVisible = true;
 
     private static class ToolButtonData {
@@ -418,6 +425,14 @@ public class EditorSideMenu {
         SelectBox<String> curveBox = new SelectBox<>(skin);
         curveBox.setName("splineCurveSelect");
         curveBox.setItems("LINEAR", "CATMULL_ROM", "BEZIER");
+        curveBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (!syncingSplineDrafts) {
+                    splineCurveDirty = true;
+                }
+            }
+        });
         panel.add(createFieldLabel("Curve type")).left().padBottom(3f).row();
         panel.add(curveBox).expandX().fillX().padBottom(6f).row();
 
@@ -429,6 +444,14 @@ public class EditorSideMenu {
         SelectBox<String> handleModeBox = new SelectBox<>(skin);
         handleModeBox.setName("splineHandleModeSelect");
         handleModeBox.setItems("FREE", "MIRRORED", "ALIGNED", "AUTO");
+        handleModeBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (!syncingSplineDrafts) {
+                    splineHandleModeDirty = true;
+                }
+            }
+        });
         panel.add(createFieldLabel("Selected point mode")).left().padBottom(3f).row();
         panel.add(handleModeBox).expandX().fillX().padBottom(6f).row();
 
@@ -471,6 +494,14 @@ public class EditorSideMenu {
         SelectBox<String> tileModeBox = new SelectBox<>(skin);
         tileModeBox.setName("splineTileModeSelect");
         tileModeBox.setItems("STRETCH", "REPEAT");
+        tileModeBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (!syncingSplineDrafts) {
+                    splineTileModeDirty = true;
+                }
+            }
+        });
         panel.add(createFieldLabel("Tile mode")).left().padBottom(3f).row();
         panel.add(tileModeBox).expandX().fillX().padBottom(6f).row();
 
@@ -545,6 +576,7 @@ public class EditorSideMenu {
                     "editor-dirt"
                 );
                 if (updated != null) {
+                    splineCurveDirty = false;
                     levelEditor.executeCommand(new UpdateSplinePathPropertiesCommand(levelEditor, updated));
                 }
             }
@@ -568,6 +600,7 @@ public class EditorSideMenu {
                     levelEditor.getSelectedSplineLayer() != null && levelEditor.getSelectedSplineLayer().collisionEnabled
                 );
                 if (updated != null) {
+                    splineTileModeDirty = false;
                     levelEditor.executeCommand(new UpdateSplineLayerPropertiesCommand(levelEditor, updated));
                 }
             }
@@ -644,6 +677,8 @@ public class EditorSideMenu {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (levelEditor.getSelectedSplinePathId() != null) {
+                    splineCurveDirty = false;
+                    splineHandleModeDirty = false;
                     levelEditor.executeCommand(new AutoSmoothSplineHandlesCommand(levelEditor, levelEditor.getSelectedSplinePathId()));
                 }
             }
@@ -653,6 +688,7 @@ public class EditorSideMenu {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (levelEditor.getSelectedSplinePathId() != null && levelEditor.getSelectedSplinePointId() != null) {
+                    splineHandleModeDirty = false;
                     levelEditor.executeCommand(new ResetSplineHandlesCommand(levelEditor,
                         levelEditor.getSelectedSplinePathId(), levelEditor.getSelectedSplinePointId()));
                 }
@@ -668,6 +704,8 @@ public class EditorSideMenu {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (levelEditor.getSelectedSplinePathId() != null) {
+                    splineCurveDirty = false;
+                    splineHandleModeDirty = false;
                     levelEditor.executeCommand(new ConvertSplineToBezierCommand(levelEditor, levelEditor.getSelectedSplinePathId()));
                 }
             }
@@ -677,6 +715,7 @@ public class EditorSideMenu {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 if (levelEditor.getSelectedSplinePathId() != null && levelEditor.getSelectedSplinePointId() != null) {
+                    splineHandleModeDirty = false;
                     levelEditor.executeCommand(new UpdateSplinePointHandleModeCommand(levelEditor,
                         levelEditor.getSelectedSplinePathId(), levelEditor.getSelectedSplinePointId(),
                         BezierHandleMode.valueOf(handleModeBox.getSelected())));
@@ -829,6 +868,22 @@ public class EditorSideMenu {
     }
 
     private void syncSplineEditor() {
+        String selectedPathId = levelEditor.getSelectedSplinePathId();
+        String selectedLayerId = levelEditor.getSelectedSplineLayerId();
+        String selectedPointId = levelEditor.getSelectedSplinePointId();
+        if (!safeEquals(lastSplinePathSelectionId, selectedPathId)) {
+            lastSplinePathSelectionId = selectedPathId;
+            splineCurveDirty = false;
+        }
+        if (!safeEquals(lastSplineLayerSelectionId, selectedLayerId)) {
+            lastSplineLayerSelectionId = selectedLayerId;
+            splineTileModeDirty = false;
+        }
+        if (!safeEquals(lastSplinePointSelectionId, selectedPointId)) {
+            lastSplinePointSelectionId = selectedPointId;
+            splineHandleModeDirty = false;
+        }
+
         List<String> splineIds = new ArrayList<>();
         for (SplinePath splinePath : levelEditor.getSplinePaths()) {
             splineIds.add(splinePath.id);
@@ -866,6 +921,7 @@ public class EditorSideMenu {
         if (selectedPath == null) {
             splineSelectionLabel.setText("Spline: none");
             splineHandleModeLabel.setText("Handle mode: none");
+            splineCurveDirty = false;
         } else {
             splineSelectionLabel.setText("Spline: " + selectedPath.name + " | " + selectedPath.getPoints().size() + " pts");
             if (stage.getKeyboardFocus() != splineNameField) {
@@ -874,16 +930,17 @@ public class EditorSideMenu {
             if (stage.getKeyboardFocus() != splineThicknessField) {
                 splineThicknessField.setText(String.valueOf(selectedPath.collisionThickness));
             }
-            splineCurveSelect.setSelected((selectedPath.curveType == null ? SplineCurveType.LINEAR : selectedPath.curveType).name());
+            syncSelectBox(splineCurveSelect, (selectedPath.curveType == null ? SplineCurveType.LINEAR : selectedPath.curveType).name(), splineCurveDirty);
         }
 
         if (levelEditor.getSelectedSplinePoint() != null) {
             String modeName = levelEditor.getSelectedSplinePointHandleMode().name();
             splineHandleModeLabel.setText("Point: " + levelEditor.getSelectedSplinePoint().id + " | " + modeName);
-            splineHandleModeSelect.setSelected(modeName);
+            syncSelectBox(splineHandleModeSelect, modeName, splineHandleModeDirty);
         } else {
             splineHandleModeLabel.setText("Handle mode: none");
-            splineHandleModeSelect.setSelected(BezierHandleMode.AUTO.name());
+            splineHandleModeDirty = false;
+            syncSelectBox(splineHandleModeSelect, BezierHandleMode.AUTO.name(), false);
         }
 
         SplineLayer selectedLayer = levelEditor.getSelectedSplineLayer();
@@ -903,7 +960,7 @@ public class EditorSideMenu {
             if (stage.getKeyboardFocus() != splineOffsetField) {
                 splineOffsetField.setText(String.valueOf(selectedLayer.verticalOffset));
             }
-            splineTileModeSelect.setSelected((selectedLayer.tileMode == null ? SplineTileMode.STRETCH : selectedLayer.tileMode).name());
+            syncSelectBox(splineTileModeSelect, (selectedLayer.tileMode == null ? SplineTileMode.STRETCH : selectedLayer.tileMode).name(), splineTileModeDirty);
         }
     }
 
@@ -921,6 +978,22 @@ public class EditorSideMenu {
         } catch (Exception exception) {
             return fallback;
         }
+    }
+
+    private void syncSelectBox(SelectBox<String> selectBox, String value, boolean dirty) {
+        if (dirty || value == null || !selectBox.getItems().contains(value, false)) {
+            return;
+        }
+        syncingSplineDrafts = true;
+        try {
+            selectBox.setSelected(value);
+        } finally {
+            syncingSplineDrafts = false;
+        }
+    }
+
+    private boolean safeEquals(String left, String right) {
+        return left == null ? right == null : left.equals(right);
     }
 
     private Table createSection(String title) {
