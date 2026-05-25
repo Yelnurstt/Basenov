@@ -60,8 +60,8 @@ public class ControlDemoScreen implements Screen {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(Color.LIME);
-        for (TerrainSegment segment : terrainCollisionData.getSegments()) {
-            shapeRenderer.line(segment.p1.x, segment.p1.y, segment.p2.x, segment.p2.y);
+        for (TerrainSegment segment : terrainPath.getSegments()) {
+            shapeRenderer.line(segment.getP1().x, segment.getP1().y, segment.getP2().x, segment.getP2().y);
         }
 
         if (debugMode) {

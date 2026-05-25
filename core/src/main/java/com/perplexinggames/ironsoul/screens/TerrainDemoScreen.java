@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.perplexinggames.ironsoul.entities.PhysicsTank;
 import com.perplexinggames.ironsoul.terrain.SegmentTerrainCollisionProvider;
@@ -75,33 +76,28 @@ public class TerrainDemoScreen implements Screen {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
 
         // Рисуем отрезки земли (зеленые)
+        // СТАЛО:
         shapeRenderer.setColor(Color.LIME);
         for (TerrainSegment seg : terrainPath.getSegments()) {
-            shapeRenderer.line(seg.p1.x, seg.p1.y, seg.p2.x, seg.p2.y);
+            shapeRenderer.line(seg.getP1().x, seg.getP1().y, seg.getP2().x, seg.getP2().y);
         }
 
         if (debugMode) {
             // Рисуем лучи (Probes - красные)
             shapeRenderer.setColor(Color.RED);
-            float pY = tank.physics.y + tank.physics.probeHeightOffset;
+
+            float leftExpectedY = tank.physics.y - (tank.physics.trackWidth / 2f) * MathUtils.sinDeg(tank.physics.rotation);
+            float rightExpectedY = tank.physics.y + (tank.physics.trackWidth / 2f) * MathUtils.sinDeg(tank.physics.rotation);
+            float pY = tank.physics.probeHeightOffset;
+
             float lX = tank.physics.x - tank.physics.trackWidth / 2f;
+            float cX = tank.physics.x;
             float rX = tank.physics.x + tank.physics.trackWidth / 2f;
 
-            shapeRenderer.line(lX, pY, lX, pY - tank.physics.probeLength);
-            shapeRenderer.line(rX, pY, rX, pY - tank.physics.probeLength);
-
-            // Рисуем точки контакта и нормали (голубые векторы)
-            shapeRenderer.setColor(Color.CYAN);
-            if (tank.physics.leftContact.hasContact) {
-                shapeRenderer.circle(tank.physics.leftContact.point.x, tank.physics.leftContact.point.y, 4);
-                shapeRenderer.line(tank.physics.leftContact.point,
-                    tank.physics.leftContact.point.cpy().add(tank.physics.leftContact.normal.cpy().scl(25)));
-            }
-            if (tank.physics.rightContact.hasContact) {
-                shapeRenderer.circle(tank.physics.rightContact.point.x, tank.physics.rightContact.point.y, 4);
-                shapeRenderer.line(tank.physics.rightContact.point,
-                    tank.physics.rightContact.point.cpy().add(tank.physics.rightContact.normal.cpy().scl(25)));
-            }
+            // Левый, Центральный и Правый лучи
+            shapeRenderer.line(lX, leftExpectedY + pY, lX, leftExpectedY + pY - tank.physics.probeLength);
+            shapeRenderer.line(cX, tank.physics.y + pY, cX, tank.physics.y + pY - tank.physics.probeLength);
+            shapeRenderer.line(rX, rightExpectedY + pY, rX, rightExpectedY + pY - tank.physics.probeLength);
         }
         shapeRenderer.end();
 
@@ -121,13 +117,23 @@ public class TerrainDemoScreen implements Screen {
         batch.end();
     }
 
-    @Override public void resize(int width, int height) {
+    @Override
+    public void resize(int width, int height) {
         camera.viewportWidth = width;
         camera.viewportHeight = height;
     }
-    @Override public void pause() {}
-    @Override public void resume() {}
-    @Override public void hide() {}
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
 
     @Override
     public void dispose() {

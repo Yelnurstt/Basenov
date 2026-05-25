@@ -117,9 +117,9 @@ public class TankController {
 
         model.setVelocityX(tangent.x * tangentSpeed);
         model.setVelocityY(tangent.y * tangentSpeed);
-        model.setX(model.getX() + model.getVelocityX() * delta);
-        model.setY(model.getY() + model.getVelocityY() * delta);
-        clampToArena();
+
+        // ФИКС СТЕН: Двигаемся с учетом вертикальных преград (Радар)
+        moveWithWallCollision(delta);
 
         refreshGroundContacts();
         if (grounded) {
@@ -160,9 +160,8 @@ public class TankController {
     }
 
     public void integrate(float delta) {
-        model.setX(model.getX() + model.getVelocityX() * delta);
-        model.setY(model.getY() + model.getVelocityY() * delta);
-        clampToArena();
+        // ФИКС СТЕН: Двигаемся с учетом вертикальных преград (Радар)
+        moveWithWallCollision(delta);
         refreshGroundContacts();
 
         if (grounded) {
@@ -171,6 +170,33 @@ public class TankController {
         }
 
         smoothAirborneRotation(delta);
+    }
+
+    // ===============================================
+    // НОВЫЙ МЕТОД: РАДАР СТЕН (Защита от прохождения сквозь 90 градусов)
+    // ===============================================
+    private void moveWithWallCollision(float delta) {
+        float vx = model.getVelocityX();
+        float oldX = model.getX();
+        float nextX = oldX + vx * delta;
+
+        if (vx != 0f) {
+            float bodyHalfWidth = model.getWidth() * 0.5f;
+            // Радар "смотрит" немного вперед по ходу движения
+            float checkOffset = Math.signum(vx) * (bodyHalfWidth + 5f);
+            float centerX = oldX + bodyHalfWidth;
+            float nextCenterX = nextX + bodyHalfWidth;
+
+            // 15f - максимальная высота препятствия
+            if (terrainCollisionProvider.hasBlockingWall(centerX, nextCenterX + checkOffset, model.getY(), 15f)) {
+                model.setVelocityX(0f); // Гасим скорость
+                nextX = oldX;           // Останавливаемся ровно ПЕРЕД стеной
+            }
+        }
+
+        model.setX(nextX);
+        model.setY(model.getY() + model.getVelocityY() * delta);
+        clampToArena();
     }
 
     public void snapToGround() {
@@ -343,14 +369,48 @@ public class TankController {
     }
 
     private void refreshGroundContacts() {
-        updateProbePositions();
+        float extraHeight = 30f;
+        float probeY = model.getY() + config.getProbeStartHeight() + extraHeight;
 
-        leftTrackContact = terrainCollisionProvider.findGroundBelow(leftTrackProbe, config.getProbeDistance());
-        rightTrackContact = terrainCollisionProvider.findGroundBelow(rightTrackProbe, config.getProbeDistance());
+        leftTrackProbe.set(model.getX() + config.getProbeInset(), probeY);
+        rightTrackProbe.set(model.getX() + model.getWidth() - config.getProbeInset(), probeY);
+        Vector2 centerTrackProbe = new Vector2(model.getX() + model.getWidth() * 0.5f, probeY);
+
+        float speedRatio = Math.abs(model.getVelocityX()) / config.getMaxMoveSpeed();
+        speedRatio = MathUtils.clamp(speedRatio, 0f, 1f);
+        float speedFactor = speedRatio * speedRatio * speedRatio;
+
+        float restingDist = config.getProbeStartHeight() + config.getTrackToBodyOffset();
+        float minProbe = restingDist + 15f;
+        float maxProbe = config.getProbeDistance();
+
+        float currentProbeDist = MathUtils.lerp(maxProbe, minProbe, speedFactor) + extraHeight;
+
+        leftTrackContact = terrainCollisionProvider.findGroundBelow(leftTrackProbe, currentProbeDist);
+        rightTrackContact = terrainCollisionProvider.findGroundBelow(rightTrackProbe, currentProbeDist);
+        TerrainContactInfo centerContact = terrainCollisionProvider.findGroundBelow(centerTrackProbe, currentProbeDist);
 
         boolean leftGrounded = leftTrackContact.isGrounded();
         boolean rightGrounded = rightTrackContact.isGrounded();
-        boolean computedGrounded = leftGrounded || rightGrounded;
+        boolean centerGrounded = centerContact.isGrounded();
+
+        if (grounded && speedRatio > 0.3f && (leftGrounded != rightGrounded)) {
+            boolean forcedDetachment = false;
+            if (model.getVelocityX() > 0f && !rightGrounded && leftGrounded) {
+                leftGrounded = false;
+                forcedDetachment = true;
+            } else if (model.getVelocityX() < 0f && !leftGrounded && rightGrounded) {
+                rightGrounded = false;
+                forcedDetachment = true;
+            }
+
+            if (forcedDetachment) {
+                model.setVelocityY(model.getVelocityY() + 180f * speedRatio);
+                model.setVelocityX(model.getVelocityX() * 1.05f);
+            }
+        }
+
+        boolean computedGrounded = leftGrounded || rightGrounded || centerGrounded;
 
         if (detachFromGroundRemaining > 0f) {
             computedGrounded = false;
@@ -361,7 +421,7 @@ public class TankController {
 
         grounded = computedGrounded;
         if (!grounded) {
-            averageContactPoint.set((leftTrackProbe.x + rightTrackProbe.x) * 0.5f, model.getY() - config.getTrackToBodyOffset());
+            averageContactPoint.set(centerTrackProbe.x, model.getY() - config.getTrackToBodyOffset());
             averageSurfaceNormal.set(0f, 1f);
             averageSurfaceTangent.set(1f, 0f);
             surfaceAngle = 0f;
@@ -371,10 +431,6 @@ public class TankController {
         }
 
         if (leftGrounded && rightGrounded) {
-            averageContactPoint.set(
-                (leftTrackContact.getContactPoint().x + rightTrackContact.getContactPoint().x) * 0.5f,
-                (leftTrackContact.getContactPoint().y + rightTrackContact.getContactPoint().y) * 0.5f
-            );
             averageSurfaceNormal.set(leftTrackContact.getSurfaceNormal()).add(rightTrackContact.getSurfaceNormal()).nor();
             averageSurfaceTangent.set(leftTrackContact.getSurfaceTangent()).add(rightTrackContact.getSurfaceTangent());
             if (averageSurfaceTangent.isZero(0.001f)) {
@@ -391,10 +447,20 @@ public class TankController {
             ) * MathUtils.radiansToDegrees;
             targetTankRotation = surfaceAngle;
             activeGroundFriction = (leftTrackContact.getFriction() + rightTrackContact.getFriction()) * 0.5f;
+
+            float midY = (leftTrackContact.getContactPoint().y + rightTrackContact.getContactPoint().y) * 0.5f;
+            if (centerGrounded && centerContact.getContactPoint().y > midY) {
+                averageContactPoint.set(centerContact.getContactPoint());
+            } else {
+                averageContactPoint.set(
+                    (leftTrackContact.getContactPoint().x + rightTrackContact.getContactPoint().x) * 0.5f,
+                    midY
+                );
+            }
             return;
         }
 
-        TerrainContactInfo contact = leftGrounded ? leftTrackContact : rightTrackContact;
+        TerrainContactInfo contact = centerGrounded ? centerContact : (leftGrounded ? leftTrackContact : rightTrackContact);
         averageContactPoint.set(contact.getContactPoint());
         averageSurfaceNormal.set(contact.getSurfaceNormal());
         averageSurfaceTangent.set(contact.getSurfaceTangent());
@@ -407,9 +473,7 @@ public class TankController {
     }
 
     private void updateProbePositions() {
-        float probeY = model.getY() + config.getProbeStartHeight();
-        leftTrackProbe.set(model.getX() + config.getProbeInset(), probeY);
-        rightTrackProbe.set(model.getX() + model.getWidth() - config.getProbeInset(), probeY);
+        // Оставили пустым (логика теперь в refreshGroundContacts)
     }
 
     private void alignToGround(float delta, boolean immediate) {
