@@ -12,7 +12,9 @@ public class Enemy extends GameEntity {
 
     private final Rectangle bounds;
     private final Texture texture;
-
+    private final float startX;
+    private final float patrolDistance = 200f;
+    private int direction = 1;
     private final AttackComponent attackComponent;
     private final MovementComponent movementComponent;
     private enum EnemyState {
@@ -24,6 +26,7 @@ public class Enemy extends GameEntity {
     private EnemyState state = EnemyState.IDLE;
     public Enemy(float x, float y, float width, float height) {
         super(x, y, 50f);
+        this.startX = x;
         attackComponent = new AttackComponent(10f);
         movementComponent = new MovementComponent(60f);
         bounds = new Rectangle(x, y, width, height);
@@ -38,11 +41,22 @@ public class Enemy extends GameEntity {
 
     @Override
     public void update(float delta) {
-        x += movementComponent.getSpeed() * delta;
-        bounds.setPosition(x, y);иа
         if (isDead()) {
             state = EnemyState.DEAD;
+            return;
         }
+
+        x += movementComponent.getSpeed() * direction * delta;
+
+        if (x > startX + patrolDistance) {
+            direction = -1;
+        }
+
+        if (x < startX) {
+            direction = 1;
+        }
+
+        bounds.setPosition(x, y);
     }
     @Override
     public void render(SpriteBatch batch) {
