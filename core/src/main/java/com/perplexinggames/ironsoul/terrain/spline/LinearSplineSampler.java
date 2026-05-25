@@ -14,28 +14,17 @@ public class LinearSplineSampler implements SplineSampler {
         }
 
         List<SplineControlPoint> points = splinePath.getPoints();
+        if (points.size() == 1) {
+            samples.add(new SplineSample(new Vector2(points.get(0).x, points.get(0).y), new Vector2(1f, 0f), 0f));
+            return samples;
+        }
+        int segmentCount = splinePath.closed ? points.size() : points.size() - 1;
         float distance = 0f;
-        for (int i = 0; i < points.size(); i++) {
-            SplineControlPoint current = points.get(i);
-            Vector2 currentPosition = new Vector2(current.x, current.y);
-            Vector2 tangent;
-            if (i < points.size() - 1) {
-                SplineControlPoint next = points.get(i + 1);
-                tangent = new Vector2(next.x - current.x, next.y - current.y).nor();
-            } else if (i > 0) {
-                SplineControlPoint previous = points.get(i - 1);
-                tangent = new Vector2(current.x - previous.x, current.y - previous.y).nor();
-            } else {
-                tangent = new Vector2(1f, 0f);
-            }
-            if (samples.isEmpty()) {
-                samples.add(new SplineSample(currentPosition, tangent, 0f));
-                continue;
-            }
-
-            SplineControlPoint previous = points.get(i - 1);
-            Vector2 start = new Vector2(previous.x, previous.y);
-            Vector2 end = currentPosition;
+        for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++) {
+            SplineControlPoint startPoint = points.get(segmentIndex);
+            SplineControlPoint endPoint = points.get((segmentIndex + 1) % points.size());
+            Vector2 start = new Vector2(startPoint.x, startPoint.y);
+            Vector2 end = new Vector2(endPoint.x, endPoint.y);
             Vector2 segment = new Vector2(end).sub(start);
             float length = segment.len();
             if (length <= 0.001f) {
@@ -43,14 +32,17 @@ public class LinearSplineSampler implements SplineSampler {
             }
 
             Vector2 direction = new Vector2(segment).nor();
+            Vector2 normal = new Vector2(-direction.y, direction.x);
+            if (samples.isEmpty()) {
+                samples.add(new SplineSample(start, direction, normal, 0f));
+            }
             float spacing = Math.max(1f, sampleSpacing);
             int subdivisions = Math.max(1, (int) Math.ceil(length / spacing));
             for (int step = 1; step <= subdivisions; step++) {
                 float alpha = step / (float) subdivisions;
                 Vector2 position = new Vector2(start).lerp(end, alpha);
-                distance += step == subdivisions ? position.dst(samples.get(samples.size() - 1).getPosition())
-                    : length / subdivisions;
-                samples.add(new SplineSample(position, direction, distance));
+                distance += position.dst(samples.get(samples.size() - 1).getPosition());
+                samples.add(new SplineSample(position, direction, normal, distance));
             }
         }
         return samples;

@@ -30,10 +30,11 @@ public class CatmullRomSplineSampler implements SplineSampler {
             float t = sampleCount == 0 ? 0f : i / (float) sampleCount;
             Vector2 position = spline.valueAt(new Vector2(), t);
             Vector2 tangent = spline.derivativeAt(new Vector2(), t).nor();
+            Vector2 normal = new Vector2(-tangent.y, tangent.x);
             if (previousPosition != null) {
                 distance += previousPosition.dst(position);
             }
-            samples.add(new SplineSample(position, tangent, distance));
+            samples.add(new SplineSample(position, tangent, normal, distance));
             previousPosition = position;
         }
         return samples;

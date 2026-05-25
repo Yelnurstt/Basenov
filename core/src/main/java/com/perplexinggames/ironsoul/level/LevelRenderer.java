@@ -11,6 +11,7 @@ import com.perplexinggames.ironsoul.terrain.TerrainCollisionData;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.TerrainSegment;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleType;
 import com.perplexinggames.ironsoul.terrain.spline.SplineTerrainRenderer;
 import com.perplexinggames.ironsoul.world.GateData;
 import com.perplexinggames.ironsoul.world.SpawnPointData;
@@ -93,7 +94,7 @@ public class LevelRenderer {
 
     public void renderEditor(RuntimeLevel runtimeLevel, WorldBlockData activeBlock, OrthographicCamera camera, GridPoint2 hoveredCell,
                              GridPoint2 selectedCell, TerrainPoint selectedTerrainPoint,
-                             String selectedSplinePathId, String selectedSplinePointId) {
+                             String selectedSplinePathId, String selectedSplinePointId, BezierHandleType selectedSplineHandleType) {
         renderGameplay(runtimeLevel, activeBlock, camera);
 
         shapeRenderer.setProjectionMatrix(camera.combined);
@@ -104,7 +105,8 @@ public class LevelRenderer {
         shapeRenderer.end();
 
         if (!runtimeLevel.getSplinePaths().isEmpty()) {
-            splineTerrainRenderer.renderDebug(shapeRenderer, camera, runtimeLevel, selectedSplinePathId, selectedSplinePointId);
+            splineTerrainRenderer.renderDebug(shapeRenderer, camera, runtimeLevel,
+                selectedSplinePathId, selectedSplinePointId, selectedSplineHandleType);
         }
 
         shapeRenderer.setProjectionMatrix(camera.combined);

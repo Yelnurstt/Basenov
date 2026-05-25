@@ -128,7 +128,8 @@ public class LevelEditorDemoScreen implements Screen {
                 levelEditor.getSelectedCell(),
                 levelEditor.getSelectedTerrainPoint(),
                 levelEditor.getSelectedSplinePathId(),
-                levelEditor.getSelectedSplinePointId()
+                levelEditor.getSelectedSplinePointId(),
+                levelEditor.getSelectedSplineHandleType()
             );
             gridRenderer.render(levelEditor, worldCamera);
         } else {

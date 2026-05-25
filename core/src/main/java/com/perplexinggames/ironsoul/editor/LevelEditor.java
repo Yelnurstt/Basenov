@@ -22,8 +22,12 @@ import com.perplexinggames.ironsoul.level.BlockType;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleMode;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleService;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleType;
 import com.perplexinggames.ironsoul.terrain.spline.SplineControlPoint;
 import com.perplexinggames.ironsoul.terrain.spline.SplineCurveType;
+import com.perplexinggames.ironsoul.terrain.spline.SplineHandleHit;
 import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
 import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
 import com.perplexinggames.ironsoul.terrain.spline.SplineTileMode;
@@ -86,6 +90,7 @@ public class LevelEditor implements EditorToolController {
     private String selectedSplinePathId;
     private String selectedSplinePointId;
     private String selectedSplineLayerId;
+    private BezierHandleType selectedSplineHandleType;
     private String selectedGateId;
     private String selectedSpawnPointId;
     private String lastStatusMessage;
@@ -232,6 +237,10 @@ public class LevelEditor implements EditorToolController {
         return selectedSplineLayerId;
     }
 
+    public BezierHandleType getSelectedSplineHandleType() {
+        return selectedSplineHandleType;
+    }
+
     public String findSplinePathIdForPoint(String pointId) {
         return findSplinePathIdByPointId(pointId);
     }
@@ -313,6 +322,7 @@ public class LevelEditor implements EditorToolController {
     public void selectSplinePath(String pathId) {
         selectedSplinePathId = pathId;
         if (pathId == null) {
+            selectedSplineHandleType = null;
             updateStatus("Spline selection cleared");
             return;
         }
@@ -329,6 +339,7 @@ public class LevelEditor implements EditorToolController {
 
     public void selectSplinePoint(String pointId) {
         selectedSplinePointId = pointId;
+        selectedSplineHandleType = null;
         if (pointId == null) {
             updateStatus("Spline point selection cleared");
             return;
@@ -341,6 +352,7 @@ public class LevelEditor implements EditorToolController {
 
     public void selectSplineLayer(String layerId) {
         selectedSplineLayerId = layerId;
+        selectedSplineHandleType = null;
         if (layerId == null) {
             updateStatus("Spline layer selection cleared");
             return;
@@ -350,6 +362,16 @@ public class LevelEditor implements EditorToolController {
             selectedSplinePathId = layer.parentSplinePathId;
             updateStatus("Selected spline layer " + layer.name);
         }
+    }
+
+    public void selectSplineHandle(String pointId, BezierHandleType handleType) {
+        selectedSplinePointId = pointId;
+        selectedSplineHandleType = handleType;
+        if (pointId == null || handleType == null) {
+            updateStatus("Spline handle selection cleared");
+            return;
+        }
+        updateStatus("Selected " + handleType + " handle for " + pointId);
     }
 
     public void selectGate(String gateId) {
@@ -400,6 +422,38 @@ public class LevelEditor implements EditorToolController {
             }
         }
         return closestPoint;
+    }
+
+    public SplineHandleHit findSplineHandleNear(float worldX, float worldY) {
+        SplinePath selectedPath = getSelectedSplinePath();
+        if (selectedPath == null || selectedPath.curveType != SplineCurveType.BEZIER) {
+            return null;
+        }
+        Vector2 target = new Vector2(worldX, worldY);
+        float maxDistance = runtimeLevel.getTileSize() * TERRAIN_POINT_PICK_RADIUS_CELLS;
+        SplineHandleHit closestHandle = null;
+        float closestDistance = Float.MAX_VALUE;
+
+        for (SplineControlPoint point : selectedPath.getPoints()) {
+            if (point.getInHandleOffset().len2() > 0.001f) {
+                Vector2 inHandle = point.getInHandleWorldPosition();
+                float inDistance = target.dst(inHandle);
+                if (inDistance <= maxDistance && inDistance < closestDistance) {
+                    closestDistance = inDistance;
+                    closestHandle = new SplineHandleHit(selectedPath.id, point.id, BezierHandleType.IN, inHandle.x, inHandle.y);
+                }
+            }
+
+            if (point.getOutHandleOffset().len2() > 0.001f) {
+                Vector2 outHandle = point.getOutHandleWorldPosition();
+                float outDistance = target.dst(outHandle);
+                if (outDistance <= maxDistance && outDistance < closestDistance) {
+                    closestDistance = outDistance;
+                    closestHandle = new SplineHandleHit(selectedPath.id, point.id, BezierHandleType.OUT, outHandle.x, outHandle.y);
+                }
+            }
+        }
+        return closestHandle;
     }
 
     public String createTerrainPointId() {
@@ -528,7 +582,11 @@ public class LevelEditor implements EditorToolController {
         List<SplineControlPoint> points = copySplinePoints(currentPath.getPoints());
         Vector2 position = resolveTerrainPointPosition(worldX, worldY);
         points.add(new SplineControlPoint(pointId, position.x, position.y));
-        return copySplinePathWithPoints(currentPath, points);
+        SplinePath updated = copySplinePathWithPoints(currentPath, points);
+        if (updated.curveType == SplineCurveType.BEZIER) {
+            BezierHandleService.ensureValidHandles(updated);
+        }
+        return updated;
     }
 
     public SplinePath buildSplinePathWithMovedPoint(String pathId, String pointId, float worldX, float worldY) {
@@ -541,13 +599,23 @@ public class LevelEditor implements EditorToolController {
         boolean changed = false;
         for (SplineControlPoint point : currentPath.getPoints()) {
             if (point.id.equals(pointId)) {
-                points.add(new SplineControlPoint(pointId, position.x, position.y));
+                SplineControlPoint movedPoint = point.copy();
+                movedPoint.x = position.x;
+                movedPoint.y = position.y;
+                points.add(movedPoint);
                 changed = true;
             } else {
                 points.add(point.copy());
             }
         }
-        return changed ? copySplinePathWithPoints(currentPath, points) : null;
+        if (!changed) {
+            return null;
+        }
+        SplinePath updated = copySplinePathWithPoints(currentPath, points);
+        if (updated.curveType == SplineCurveType.BEZIER) {
+            BezierHandleService.ensureValidHandles(updated);
+        }
+        return updated;
     }
 
     public SplinePath buildSplinePathWithRemovedPoint(String pathId, String pointId) {
@@ -564,7 +632,38 @@ public class LevelEditor implements EditorToolController {
             }
             points.add(point.copy());
         }
-        return removed ? copySplinePathWithPoints(currentPath, points) : null;
+        if (!removed) {
+            return null;
+        }
+        SplinePath updated = copySplinePathWithPoints(currentPath, points);
+        if (updated.curveType == SplineCurveType.BEZIER) {
+            BezierHandleService.ensureValidHandles(updated);
+        }
+        return updated;
+    }
+
+    public SplinePath buildSplinePathWithMovedHandle(String pathId, String pointId, BezierHandleType handleType, float worldX, float worldY) {
+        SplinePath currentPath = runtimeLevel.getSplinePath(pathId);
+        if (currentPath == null || handleType == null) {
+            return null;
+        }
+        List<SplineControlPoint> points = copySplinePoints(currentPath.getPoints());
+        boolean changed = false;
+        for (SplineControlPoint point : points) {
+            if (!point.id.equals(pointId)) {
+                continue;
+            }
+            float offsetX = worldX - point.x;
+            float offsetY = worldY - point.y;
+            if (handleType == BezierHandleType.IN) {
+                BezierHandleService.setInHandle(point, offsetX, offsetY);
+            } else {
+                BezierHandleService.setOutHandle(point, offsetX, offsetY);
+            }
+            changed = true;
+            break;
+        }
+        return changed ? copySplinePathWithPoints(currentPath, points) : null;
     }
 
     public boolean replaceSplinePath(SplinePath splinePath) {
@@ -586,6 +685,7 @@ public class LevelEditor implements EditorToolController {
                 selectedSplinePathId = null;
                 selectedSplinePointId = null;
                 selectedSplineLayerId = null;
+                selectedSplineHandleType = null;
             }
             syncLoadedBlockFromRuntimeLevel();
             validateWorld();
@@ -630,8 +730,81 @@ public class LevelEditor implements EditorToolController {
         if (existing == null) {
             return null;
         }
-        return new SplinePath(existing.id, name, copySplinePoints(existing.getPoints()), curveType, closed, collisionEnabled,
+        SplinePath updated = new SplinePath(existing.id, name, copySplinePoints(existing.getPoints()), curveType, closed, collisionEnabled,
             collisionThickness, material, existing.physicsMaterial);
+        if (curveType == SplineCurveType.BEZIER) {
+            if (existing.curveType != SplineCurveType.BEZIER) {
+                BezierHandleService.autoGenerateHandles(updated);
+            } else {
+                BezierHandleService.ensureValidHandles(updated);
+            }
+        }
+        return updated;
+    }
+
+    public SplinePath updateSplinePointHandleMode(String pathId, String pointId, BezierHandleMode handleMode) {
+        SplinePath existing = runtimeLevel.getSplinePath(pathId);
+        if (existing == null || pointId == null || handleMode == null) {
+            return null;
+        }
+        List<SplineControlPoint> points = copySplinePoints(existing.getPoints());
+        boolean changed = false;
+        for (int i = 0; i < points.size(); i++) {
+            SplineControlPoint point = points.get(i);
+            if (!pointId.equals(point.id)) {
+                continue;
+            }
+            point.handleMode = handleMode;
+            if (handleMode == BezierHandleMode.AUTO) {
+                SplinePath working = copySplinePathWithPoints(existing, points);
+                BezierHandleService.applyAutoHandles(working, i);
+                points = copySplinePoints(working.getPoints());
+            } else if (handleMode == BezierHandleMode.MIRRORED) {
+                BezierHandleService.applyHandleModeAfterOutChanged(point);
+            } else if (handleMode == BezierHandleMode.ALIGNED) {
+                BezierHandleService.applyHandleModeAfterOutChanged(point);
+            }
+            changed = true;
+            break;
+        }
+        return changed ? copySplinePathWithPoints(existing, points) : null;
+    }
+
+    public SplinePath buildSplinePathWithResetHandles(String pathId, String pointId) {
+        SplinePath existing = runtimeLevel.getSplinePath(pathId);
+        if (existing == null || pointId == null) {
+            return null;
+        }
+        SplinePath updated = existing.copy();
+        BezierHandleService.resetHandles(updated, pointId);
+        return updated;
+    }
+
+    public SplinePath buildSplinePathWithAutoSmooth(String pathId) {
+        SplinePath existing = runtimeLevel.getSplinePath(pathId);
+        if (existing == null) {
+            return null;
+        }
+        SplinePath updated = existing.copy();
+        updated.curveType = SplineCurveType.BEZIER;
+        BezierHandleService.autoGenerateHandles(updated);
+        return updated;
+    }
+
+    public SplinePath buildSplinePathConvertedToBezier(String pathId) {
+        SplinePath existing = runtimeLevel.getSplinePath(pathId);
+        if (existing == null) {
+            return null;
+        }
+        SplinePath updated = existing.copy();
+        updated.curveType = SplineCurveType.BEZIER;
+        BezierHandleService.autoGenerateHandles(updated);
+        return updated;
+    }
+
+    public BezierHandleMode getSelectedSplinePointHandleMode() {
+        SplineControlPoint point = getSelectedSplinePoint();
+        return point == null || point.handleMode == null ? BezierHandleMode.AUTO : point.handleMode;
     }
 
     public SplineLayer updateSplineLayerProperties(String layerId, String spritePath, int renderDepth, float parallaxFactor,
@@ -727,6 +900,7 @@ public class LevelEditor implements EditorToolController {
             boolean removed = replaceSplinePath(buildSplinePathWithRemovedPoint(splinePathId, splinePoint.id));
             if (removed && splinePoint.id.equals(selectedSplinePointId)) {
                 selectedSplinePointId = null;
+                selectedSplineHandleType = null;
             }
             return removed;
         }
@@ -776,6 +950,7 @@ public class LevelEditor implements EditorToolController {
         selectedSplinePathId = null;
         selectedSplinePointId = null;
         selectedSplineLayerId = null;
+        selectedSplineHandleType = null;
         selectedGateId = null;
         selectedSpawnPointId = null;
         terrainPointSequence = runtimeLevel.getTerrainPointCount();
@@ -855,6 +1030,7 @@ public class LevelEditor implements EditorToolController {
         selectedSplinePathId = null;
         selectedSplinePointId = null;
         selectedSplineLayerId = null;
+        selectedSplineHandleType = null;
         selectedGateId = null;
         selectedSpawnPointId = null;
         updateStatus("Active block: " + blockId);
@@ -1185,7 +1361,7 @@ public class LevelEditor implements EditorToolController {
     }
 
     private SplinePath copySplinePathWithPoints(SplinePath sourcePath, List<SplineControlPoint> points) {
-        return new SplinePath(
+        SplinePath copied = new SplinePath(
             sourcePath.id,
             sourcePath.name,
             points,
@@ -1196,6 +1372,10 @@ public class LevelEditor implements EditorToolController {
             sourcePath.material,
             sourcePath.physicsMaterial
         );
+        if (copied.curveType == SplineCurveType.BEZIER) {
+            BezierHandleService.ensureValidHandles(copied);
+        }
+        return copied;
     }
 
     private List<TerrainPoint> copyPoints(List<TerrainPoint> sourcePoints) {

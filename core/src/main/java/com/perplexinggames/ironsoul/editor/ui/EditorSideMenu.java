@@ -18,10 +18,14 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
 import com.perplexinggames.ironsoul.editor.command.AddSplineLayerCommand;
+import com.perplexinggames.ironsoul.editor.command.AutoSmoothSplineHandlesCommand;
+import com.perplexinggames.ironsoul.editor.command.ConvertSplineToBezierCommand;
 import com.perplexinggames.ironsoul.editor.command.CreateSplinePathCommand;
 import com.perplexinggames.ironsoul.editor.command.DeleteSplinePathCommand;
+import com.perplexinggames.ironsoul.editor.command.ResetSplineHandlesCommand;
 import com.perplexinggames.ironsoul.editor.command.RemoveSplineLayerCommand;
 import com.perplexinggames.ironsoul.editor.command.UpdateSplineLayerPropertiesCommand;
+import com.perplexinggames.ironsoul.editor.command.UpdateSplinePointHandleModeCommand;
 import com.perplexinggames.ironsoul.editor.command.UpdateSplinePathPropertiesCommand;
 import com.perplexinggames.ironsoul.editor.tool.EditorToolStrategy;
 import com.perplexinggames.ironsoul.editor.tool.EraseBlockTool;
@@ -32,6 +36,7 @@ import com.perplexinggames.ironsoul.editor.tool.SplineEditTool;
 import com.perplexinggames.ironsoul.editor.tool.SplinePenTool;
 import com.perplexinggames.ironsoul.editor.tool.SpawnPointTool;
 import com.perplexinggames.ironsoul.editor.tool.WorldMarkerTool;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleMode;
 import com.perplexinggames.ironsoul.terrain.spline.SplineCurveType;
 import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
 import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
@@ -64,6 +69,7 @@ public class EditorSideMenu {
     private final SelectBox<String> splineLayerSelect;
     private final SelectBox<String> splineCurveSelect;
     private final SelectBox<String> splineTileModeSelect;
+    private final SelectBox<String> splineHandleModeSelect;
     private final TextField splineNameField;
     private final TextField splineSpriteField;
     private final TextField splineDepthField;
@@ -72,6 +78,7 @@ public class EditorSideMenu {
     private final TextField splineOffsetField;
     private final TextField splineThicknessField;
     private final Label splineSelectionLabel;
+    private final Label splineHandleModeLabel;
 
     private List<String> lastBlockIds = List.of();
     private List<String> lastSplineIds = List.of();
@@ -231,6 +238,7 @@ public class EditorSideMenu {
         splineLayerSelect = (SelectBox<String>) inspectorContent.findActor("splineLayerSelect");
         splineCurveSelect = (SelectBox<String>) inspectorContent.findActor("splineCurveSelect");
         splineTileModeSelect = (SelectBox<String>) inspectorContent.findActor("splineTileModeSelect");
+        splineHandleModeSelect = (SelectBox<String>) inspectorContent.findActor("splineHandleModeSelect");
         splineNameField = (TextField) inspectorContent.findActor("splineNameField");
         splineSpriteField = (TextField) inspectorContent.findActor("splineSpriteField");
         splineDepthField = (TextField) inspectorContent.findActor("splineDepthField");
@@ -239,6 +247,7 @@ public class EditorSideMenu {
         splineOffsetField = (TextField) inspectorContent.findActor("splineOffsetField");
         splineThicknessField = (TextField) inspectorContent.findActor("splineThicknessField");
         splineSelectionLabel = (Label) inspectorContent.findActor("splineSelectionLabel");
+        splineHandleModeLabel = (Label) inspectorContent.findActor("splineHandleModeLabel");
         selectedGateLabel = (Label) inspectorContent.findActor("selectedGateLabel");
         selectedSpawnLabel = (Label) inspectorContent.findActor("selectedSpawnLabel");
     }
@@ -411,6 +420,17 @@ public class EditorSideMenu {
         curveBox.setItems("LINEAR", "CATMULL_ROM", "BEZIER");
         panel.add(createFieldLabel("Curve type")).left().padBottom(3f).row();
         panel.add(curveBox).expandX().fillX().padBottom(6f).row();
+
+        Label handleModeLabel = new Label("Handle mode: none", skin);
+        handleModeLabel.setName("splineHandleModeLabel");
+        handleModeLabel.setWrap(true);
+        panel.add(handleModeLabel).width(234f).left().padBottom(4f).row();
+
+        SelectBox<String> handleModeBox = new SelectBox<>(skin);
+        handleModeBox.setName("splineHandleModeSelect");
+        handleModeBox.setItems("FREE", "MIRRORED", "ALIGNED", "AUTO");
+        panel.add(createFieldLabel("Selected point mode")).left().padBottom(3f).row();
+        panel.add(handleModeBox).expandX().fillX().padBottom(6f).row();
 
         TextField thicknessField = new TextField("", skin);
         thicknessField.setName("splineThicknessField");
@@ -616,7 +636,56 @@ public class EditorSideMenu {
         });
         actionRow5.add(togglePathCollisionButton).width(114f).padRight(6f);
         actionRow5.add(toggleLayerCollisionButton).width(114f);
-        panel.add(actionRow5).left();
+        panel.add(actionRow5).left().padBottom(4f).row();
+
+        Table actionRow6 = new Table();
+        TextButton autoSmoothButton = new TextButton("Auto Smooth", skin);
+        autoSmoothButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() != null) {
+                    levelEditor.executeCommand(new AutoSmoothSplineHandlesCommand(levelEditor, levelEditor.getSelectedSplinePathId()));
+                }
+            }
+        });
+        TextButton resetHandlesButton = new TextButton("Reset Handles", skin);
+        resetHandlesButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() != null && levelEditor.getSelectedSplinePointId() != null) {
+                    levelEditor.executeCommand(new ResetSplineHandlesCommand(levelEditor,
+                        levelEditor.getSelectedSplinePathId(), levelEditor.getSelectedSplinePointId()));
+                }
+            }
+        });
+        actionRow6.add(autoSmoothButton).width(114f).padRight(6f);
+        actionRow6.add(resetHandlesButton).width(114f);
+        panel.add(actionRow6).left().padBottom(4f).row();
+
+        Table actionRow7 = new Table();
+        TextButton convertBezierButton = new TextButton("To Bezier", skin);
+        convertBezierButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() != null) {
+                    levelEditor.executeCommand(new ConvertSplineToBezierCommand(levelEditor, levelEditor.getSelectedSplinePathId()));
+                }
+            }
+        });
+        TextButton applyHandleModeButton = new TextButton("Apply Mode", skin);
+        applyHandleModeButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() != null && levelEditor.getSelectedSplinePointId() != null) {
+                    levelEditor.executeCommand(new UpdateSplinePointHandleModeCommand(levelEditor,
+                        levelEditor.getSelectedSplinePathId(), levelEditor.getSelectedSplinePointId(),
+                        BezierHandleMode.valueOf(handleModeBox.getSelected())));
+                }
+            }
+        });
+        actionRow7.add(convertBezierButton).width(114f).padRight(6f);
+        actionRow7.add(applyHandleModeButton).width(114f);
+        panel.add(actionRow7).left();
 
         return panel;
     }
@@ -796,6 +865,7 @@ public class EditorSideMenu {
         SplinePath selectedPath = levelEditor.getSelectedSplinePath();
         if (selectedPath == null) {
             splineSelectionLabel.setText("Spline: none");
+            splineHandleModeLabel.setText("Handle mode: none");
         } else {
             splineSelectionLabel.setText("Spline: " + selectedPath.name + " | " + selectedPath.getPoints().size() + " pts");
             if (stage.getKeyboardFocus() != splineNameField) {
@@ -805,6 +875,15 @@ public class EditorSideMenu {
                 splineThicknessField.setText(String.valueOf(selectedPath.collisionThickness));
             }
             splineCurveSelect.setSelected((selectedPath.curveType == null ? SplineCurveType.LINEAR : selectedPath.curveType).name());
+        }
+
+        if (levelEditor.getSelectedSplinePoint() != null) {
+            String modeName = levelEditor.getSelectedSplinePointHandleMode().name();
+            splineHandleModeLabel.setText("Point: " + levelEditor.getSelectedSplinePoint().id + " | " + modeName);
+            splineHandleModeSelect.setSelected(modeName);
+        } else {
+            splineHandleModeLabel.setText("Handle mode: none");
+            splineHandleModeSelect.setSelected(BezierHandleMode.AUTO.name());
         }
 
         SplineLayer selectedLayer = levelEditor.getSelectedSplineLayer();
