@@ -1,5 +1,5 @@
 package com.perplexinggames.ironsoul.entities;
-
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
@@ -233,5 +233,45 @@ public class PhysicsTank {
 
     public float getMaxHealth() {
         return maxHealth;
+    }
+
+    // Возвращает точную позицию конца дула в мире
+    public Vector2 getBarrelEnd() {
+        float drawScale = width / hullTex.getWidth();
+        float tracksH = tracksTex.getHeight() * drawScale;
+        float hullH = hullTex.getHeight() * drawScale;
+
+        float hullX = -width / 2f;
+        float hullY = tracksH * 0.45f;
+
+        // Координаты шарнира (крепления) башни
+        float pivotX = hullX + width * 0.5f;
+        float pivotY = hullY + hullH * 0.8f;
+
+        float gunW = turretTex.getWidth() * drawScale * 1.1f;
+        // Длина дула от крепления до кончика
+        float barrelLength = gunW - 10f;
+
+        // Вычисляем настоящий угол башни с учетом того, куда смотрит танк
+        float localAngle = facingRight ? currentTurretAngle : (180f + currentTurretAngle);
+
+        // Находим точку кончика дула
+        float localTipX = pivotX + MathUtils.cosDeg(localAngle) * barrelLength;
+        float localTipY = pivotY + MathUtils.sinDeg(localAngle) * barrelLength;
+
+        // Переводим в мировые координаты с учетом наклона танка на склонах
+        Vector2 worldPos = new Vector2(localTipX, localTipY);
+        worldPos.rotateDeg(physics.rotation);
+        worldPos.add(physics.x, physics.y);
+
+        return worldPos;
+    }
+
+    // Возвращает нормализованный вектор направления выстрела
+    public Vector2 getShootDirection() {
+        float localAngle = facingRight ? currentTurretAngle : (180f + currentTurretAngle);
+        float worldAngle = physics.rotation + localAngle;
+
+        return new Vector2(MathUtils.cosDeg(worldAngle), MathUtils.sinDeg(worldAngle));
     }
 }
