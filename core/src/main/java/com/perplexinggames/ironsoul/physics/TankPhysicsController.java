@@ -22,20 +22,29 @@ public class TankPhysicsController {
     public float probeHeightOffset = 40f;
     public float probeLength = 120f;
 
-    // === ПАРАМЕТРЫ КРУТЫХ СКЛОНОВ ===
-    public float maxClimbAngle = 55f; // Макс угол, на который танк может заехать
-    public float maxStableGroundAngle = 35f; // Макс угол, на котором танк не скатывается без газа
-    public float slopeSlideForce = 800f; // Сила, стаскивающая танк вниз на крутых склонах
+    // ПАРАМЕТРЫ КРУТЫХ СКЛОНОВ И ПРЫЖКА
+    public float maxClimbAngle = 55f;
+    public float maxStableGroundAngle = 35f;
+    public float slopeSlideForce = 800f;
+    public float jumpForce = 500f; // Сила прыжка
 
     private final TerrainCollisionProvider terrain;
     public final TerrainContactInfo leftContact = new TerrainContactInfo();
     public final TerrainContactInfo rightContact = new TerrainContactInfo();
-    public final TerrainContactInfo centerContact = new TerrainContactInfo(); // Центральный луч
+    public final TerrainContactInfo centerContact = new TerrainContactInfo();
 
     public TankPhysicsController(TerrainCollisionProvider terrain, float startX, float startY) {
         this.terrain = terrain;
         this.x = startX;
         this.y = startY;
+    }
+
+    // Метод прыжка
+    public void jump() {
+        if (state == TankPhysicsState.GROUNDED) {
+            velocity.y = jumpForce;
+            state = TankPhysicsState.AIRBORNE; // Сразу переводим в воздух
+        }
     }
 
     public void update(float delta, float inputAxis) {
@@ -59,6 +68,7 @@ public class TankPhysicsController {
         boolean rightGrounded = rightContact.hasContact;
         boolean centerGrounded = centerContact.hasContact;
 
+        // Ранний отрыв (трамплин) на большой скорости
         if (state == TankPhysicsState.GROUNDED && speedRatio > 0.4f && (leftGrounded != rightGrounded)) {
             boolean forcedDetachment = false;
             if (velocity.x > 0f && leftGrounded) {
@@ -70,7 +80,7 @@ public class TankPhysicsController {
             }
             if (forcedDetachment) {
                 velocity.y += 150f * speedRatio;
-                velocity.x *= 1f;
+                state = TankPhysicsState.AIRBORNE; // Гарантируем переход в воздух для отрыва
             }
         }
 
@@ -78,6 +88,13 @@ public class TankPhysicsController {
         if (leftGrounded) contacts++;
         if (rightGrounded) contacts++;
         if (centerGrounded) contacts++;
+
+        // === ЛОГИКА ОТРЫВА ПРИ ПРЫЖКЕ ===
+        // Если танк находится в статусе AIRBORNE (прыгнул) и летит ВВЕРХ, мы игнорируем касания щупов,
+        // чтобы физика принудительно не притянула его обратно к земле.
+        if (state == TankPhysicsState.AIRBORNE && velocity.y > 0) {
+            contacts = 0;
+        }
 
         if (contacts > 0) {
             state = TankPhysicsState.GROUNDED;
@@ -90,7 +107,6 @@ public class TankPhysicsController {
                     rightContact.point.y - leftContact.point.y).angleDeg();
                 targetY = (leftContact.point.y + rightContact.point.y) / 2f;
 
-                // FIX Проверка на острые пики
                 if (centerGrounded && targetY < centerContact.point.y) {
                     targetY = centerContact.point.y;
                 }
@@ -110,7 +126,7 @@ public class TankPhysicsController {
 
             float currentSurfaceAngle = Math.abs(targetRot);
 
-            // FIX Жестко выталкиваем танк на поверхность,
+            // Collision Safety Check
             if (y < targetY - 5f && velocity.y <= 0) {
                 y = targetY;
             }
@@ -121,7 +137,6 @@ public class TankPhysicsController {
 
             Vector2 tangent = new Vector2(MathUtils.cosDeg(rotation), MathUtils.sinDeg(rotation));
 
-            // FIX 3: Slope Limit Logic
             if (currentSurfaceAngle > maxClimbAngle) {
                 float slideDirection = Math.signum(targetRot);
                 velocity.add(-slideDirection * tangent.x * slopeSlideForce * delta, -slideDirection * tangent.y * slopeSlideForce * delta);
@@ -133,7 +148,6 @@ public class TankPhysicsController {
                     velocity.scl(friction);
                 }
 
-                // Скатывание на средних склонах без нажатия кнопок движения
                 if (currentSurfaceAngle > maxStableGroundAngle && inputAxis == 0) {
                     float slideDirection = Math.signum(targetRot);
                     velocity.add(-slideDirection * tangent.x * (slopeSlideForce * 0.25f) * delta, -slideDirection * tangent.y * (slopeSlideForce * 0.25f) * delta);
@@ -154,7 +168,7 @@ public class TankPhysicsController {
             y += velocity.y * delta;
         }
 
-        // Радар стен 
+        // Радар стен
         float nextX = x + velocity.x * delta;
         float bodyHalfWidth = trackWidth / 2f + 5f;
         float checkOffset = Math.signum(velocity.x) * bodyHalfWidth;

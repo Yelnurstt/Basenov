@@ -54,7 +54,11 @@ public class PhysicsTank {
             facingRight = true;
         }
 
-        // Обновляем спрайты, если поменяли направление
+        // === ДОБАВЛЕН ПРЫЖОК ===
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.W) || Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            physics.jump();
+        }
+
         if (facingRight && hullReg.isFlipX()) {
             hullReg.flip(true, false);
             tracksReg.flip(true, false);
