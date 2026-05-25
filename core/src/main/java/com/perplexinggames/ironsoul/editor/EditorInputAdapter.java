@@ -91,12 +91,24 @@ public class EditorInputAdapter extends InputAdapter {
                 return true;
             case Input.Keys.NUM_8:
                 levelEditor.setTool(new WorldMarkerTool("ENEMY", LevelEditor.MarkerLayer.ENEMY));
+                levelEditor.setSelectedEnemyType("BASIC");
                 return true;
             case Input.Keys.NUM_9:
                 levelEditor.setTool(new WorldMarkerTool("REWARD", LevelEditor.MarkerLayer.REWARD));
                 return true;
             case Input.Keys.NUM_0:
                 levelEditor.setTool(new WorldMarkerTool("TRIGGER", LevelEditor.MarkerLayer.TRIGGER));
+                return true;
+            case Input.Keys.F:
+                levelEditor.setSelectedEnemyType("FAST");
+                return true;
+
+            case Input.Keys.H:
+                levelEditor.setSelectedEnemyType("TANK");
+                return true;
+
+            case Input.Keys.R:
+                levelEditor.setSelectedEnemyType("FLYING");
                 return true;
             case Input.Keys.G:
                 levelEditor.toggleTerrainSnapToGrid();

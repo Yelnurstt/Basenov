@@ -88,4 +88,15 @@ public class Enemy extends GameEntity {
             aiComponent.setState(AIComponent.AIState.ATTACK);
         }
     }
+    public void setHealth(float health) {
+        healthComponent.setHealth(health);
+    }
+
+    public void setMaxHealth(float maxHealth) {
+        healthComponent.setMaxHealth(maxHealth);
+    }
+
+    public void setSpeed(float speed) {
+        movementComponent.setSpeed(speed);
+    }
 }

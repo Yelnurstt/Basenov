@@ -305,7 +305,12 @@ public class LevelEditorDemoScreen implements Screen {
             for (WorldElementData enemyMarker : activeBlock.enemies) {
                 spawnData.add(
                     new EnemySpawnData(
-                        EnemyFactory.EnemyType.BASIC,
+                        EnemyFactory.EnemyType.valueOf(
+                            enemyMarker.metadata.getOrDefault(
+                                "enemyType",
+                                "BASIC"
+                            )
+                        ),
                         enemyMarker.x,
                         enemyMarker.y
                     )
@@ -323,16 +328,17 @@ public class LevelEditorDemoScreen implements Screen {
 
         // Tank HP
         float healthPercent = tank.getHealth() / tank.getMaxHealth();
-
+        if (healthPercent < 0f) healthPercent = 0f;
+        if (healthPercent > 1f) healthPercent = 1f;
         float barX = tank.physics.x - 60f;
         float barY = tank.physics.y + 90f;
 
         font.setColor(Color.DARK_GRAY);
-        font.draw(batch, "████████████", barX, barY);
+        font.draw(batch, "□□□□□□□□□□", barX, barY);
 
         font.setColor(Color.GREEN);
 
-        int hpBars = (int) (12 * healthPercent);
+        int hpBars = (int) (10 * healthPercent);
         StringBuilder hpText = new StringBuilder();
 
         for (int i = 0; i < hpBars; i++) {
@@ -351,17 +357,20 @@ public class LevelEditorDemoScreen implements Screen {
 
         for (Enemy enemy : enemies) {
             if (!enemy.isDead()) {
-                float enemyHealthPercent = enemy.getHealth() / 50f;
+                float enemyHealthPercent = enemy.getHealth() / enemy.getMaxHealth();
+
+                if (enemyHealthPercent < 0f) enemyHealthPercent = 0f;
+                if (enemyHealthPercent > 1f) enemyHealthPercent = 1f;
 
                 float enemyBarX = enemy.getBounds().x - 20f;
                 float enemyBarY = enemy.getBounds().y + 90f;
 
                 font.setColor(Color.DARK_GRAY);
-                font.draw(batch, "████████████", enemyBarX, enemyBarY);
+                font.draw(batch, "□□□□□□□□□□", enemyBarX, enemyBarY);
 
                 font.setColor(Color.RED);
 
-                int enemyHpBars = (int) (12 * enemyHealthPercent);
+                int enemyHpBars = (int) (10 * enemyHealthPercent);
                 StringBuilder enemyHpText = new StringBuilder();
 
                 for (int i = 0; i < enemyHpBars; i++) {
