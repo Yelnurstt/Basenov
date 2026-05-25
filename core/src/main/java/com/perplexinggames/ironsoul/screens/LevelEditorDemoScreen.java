@@ -301,13 +301,15 @@ public class LevelEditorDemoScreen implements Screen {
 
         // СТРЕЛЬБА
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
-            // Берем идеальные координаты и угол прямо из пушки танка
             Vector2 barrelEnd = tank.getBarrelEnd();
             Vector2 shootDir = tank.getShootDirection();
-
-            float shootSpeed = 700f; // Оптимальная скорость для баллистики
+            float shootSpeed = 700f;
 
             projectileSystem.spawnPhysicsShot(barrelEnd.x, barrelEnd.y, shootDir.x, shootDir.y, shootSpeed);
+
+            // Высчитываем угол в градусах из вектора направления
+            float angle = MathUtils.atan2(shootDir.y, shootDir.x) * MathUtils.radiansToDegrees;
+            projectileSystem.spawnMuzzleFlash(barrelEnd.x, barrelEnd.y, angle);
 
             // Физическая отдача
             tank.physics.velocity.x -= shootDir.x * (shootSpeed * 0.4f);

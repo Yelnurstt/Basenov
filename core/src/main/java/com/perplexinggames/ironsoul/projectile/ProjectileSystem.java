@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Array;
 
 public class ProjectileSystem {
+    private final Animation<TextureRegion> muzzleFlashAnimation;
     private final Array<Projectile> activeProjectiles = new Array<>();
     private final Array<ExplosionEffect> activeExplosions = new Array<>();
 
@@ -29,6 +30,8 @@ public class ProjectileSystem {
         frames.add(new TextureRegion(expTex3));
 
         explosionAnimation = new Animation<>(0.08f, frames);
+        // Анимация вспышки
+        muzzleFlashAnimation = new Animation<>(0.03f, frames);
     }
 
     public void spawnPhysicsShot(float x, float y, float dirX, float dirY, float speed) {
@@ -36,7 +39,10 @@ public class ProjectileSystem {
     }
 
     public void spawnExplosion(float x, float y) {
-        activeExplosions.add(new ExplosionEffect(x, y, explosionAnimation, 1.0f));
+        activeExplosions.add(new ExplosionEffect(x, y, explosionAnimation, 1.0f, 0f));
+    }
+    public void spawnMuzzleFlash(float x, float y, float angle) {
+        activeExplosions.add(new ExplosionEffect(x, y, muzzleFlashAnimation, 0.4f, angle));
     }
 
     public void update(float delta) {
