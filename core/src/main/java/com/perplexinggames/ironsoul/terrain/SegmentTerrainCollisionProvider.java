@@ -1,5 +1,6 @@
 package com.perplexinggames.ironsoul.terrain;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
 import java.util.ArrayList;
@@ -26,8 +27,6 @@ public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider
 
         for (TerrainCollisionData data : collisionData) {
             for (TerrainSegment segment : data.getSegments()) {
-                // ФИКС: Используем getP1() и getP2() вместо прямых переменных!
-                // Игнорируем строго вертикальные стены при поиске пола
                 if (Math.abs(segment.getP1().x - segment.getP2().x) < 0.1f) {
                     continue;
                 }
@@ -39,8 +38,7 @@ public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider
                 float surfaceY = segment.getYAtX(position.x);
                 float distanceToSurface = position.y - surfaceY;
 
-                // ДОПУСК: -80f чтобы лучи находили гору, даже если танк врезался в неё
-                if (distanceToSurface < -80f || distanceToSurface > probeDistance + 15f) {
+                if (distanceToSurface < -35f || distanceToSurface > probeDistance + 15f) {
                     continue;
                 }
 
@@ -68,7 +66,6 @@ public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider
         );
     }
 
-    // ЛОГИКА РАДАРА СТЕН ДЛЯ СЕГМЕНТОВ
     @Override
     public boolean hasBlockingWall(float startX, float endX, float currentY, float maxStepHeight) {
         float minX = Math.min(startX, endX);
@@ -76,15 +73,26 @@ public class SegmentTerrainCollisionProvider implements TerrainCollisionProvider
 
         for (TerrainCollisionData data : collisionData) {
             for (TerrainSegment segment : data.getSegments()) {
-                if (Math.abs(segment.getP1().x - segment.getP2().x) < 0.1f) {
-                    float wallX = segment.getP1().x;
+                float p1x = segment.getP1().x;
+                float p2x = segment.getP2().x;
+                float p1y = segment.getP1().y;
+                float p2y = segment.getP2().y;
 
-                    // Простая и надежная проверка, которая работает в обе стороны!
-                    if (wallX >= minX && wallX <= maxX) {
-                        float minY = Math.min(segment.getP1().y, segment.getP2().y);
-                        float maxY = Math.max(segment.getP1().y, segment.getP2().y);
+                float segMinX = Math.min(p1x, p2x);
+                float segMaxX = Math.max(p1x, p2x);
 
-                        if (maxY > currentY + maxStepHeight && currentY >= minY - 5f) {
+                if (maxX >= segMinX && minX <= segMaxX) {
+                    float dx = p2x - p1x;
+                    float dy = p2y - p1y;
+
+                    float angle = Math.abs(MathUtils.atan2(dy, dx) * MathUtils.radiansToDegrees);
+                    if (angle > 90f) angle = 180f - angle;
+
+                    if (angle > 55f || Math.abs(dx) < 0.1f) {
+                        float minY = Math.min(p1y, p2y);
+                        float maxY = Math.max(p1y, p2y);
+
+                        if (maxY > currentY + maxStepHeight && currentY >= minY - 20f) {
                             return true;
                         }
                     }
