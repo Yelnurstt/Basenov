@@ -32,7 +32,7 @@ import com.perplexinggames.ironsoul.world.runtime.WorldStreamingService;
 import com.perplexinggames.ironsoul.world.runtime.WorldTransitionService;
 import com.perplexinggames.ironsoul.world.serialization.JsonWorldSerializer;
 import com.perplexinggames.ironsoul.world.serialization.WorldSerializer;
-
+import com.perplexinggames.ironsoul.entities.EnemyFactory;
 public class LevelEditorDemoScreen implements Screen {
     private final Main game;
 
@@ -83,7 +83,11 @@ public class LevelEditorDemoScreen implements Screen {
         transitionService = new WorldTransitionService(levelEditor.getWorldData(), streamingService,
             new PhysicsTankRuntimeAdapter(tank), blockId -> levelEditor.selectActiveBlock(blockId));
         spawnTankAtActiveBlock();
-        enemy = new Enemy(700, 300, 40, 40);
+        enemy = EnemyFactory.createEnemy(
+            EnemyFactory.EnemyType.BASIC,
+            700,
+            300
+        );
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera);
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
