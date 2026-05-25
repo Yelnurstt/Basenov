@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.perplexinggames.ironsoul.editor.command.LoadLevelCommand;
 import com.perplexinggames.ironsoul.editor.command.SaveLevelCommand;
+import com.perplexinggames.ironsoul.editor.command.UpdateSplinePointHandleModeCommand;
 import com.perplexinggames.ironsoul.editor.command.DeleteSplinePointCommand;
 import com.perplexinggames.ironsoul.editor.tool.EraseBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.GateTool;
@@ -19,6 +20,7 @@ import com.perplexinggames.ironsoul.editor.tool.SplineEditTool;
 import com.perplexinggames.ironsoul.editor.tool.SplinePenTool;
 import com.perplexinggames.ironsoul.editor.tool.SpawnPointTool;
 import com.perplexinggames.ironsoul.editor.tool.WorldMarkerTool;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleMode;
 
 import java.util.List;
 
@@ -118,6 +120,20 @@ public class EditorInputAdapter extends InputAdapter {
             case Input.Keys.I:
                 levelEditor.cycleSelectedGateTargetSpawnPoint();
                 return true;
+            case Input.Keys.H:
+                if (levelEditor.getSelectedSplinePathId() != null && levelEditor.getSelectedSplinePointId() != null) {
+                    BezierHandleMode currentMode = levelEditor.getSelectedSplinePointHandleMode();
+                    BezierHandleMode nextMode = switch (currentMode) {
+                        case FREE -> BezierHandleMode.MIRRORED;
+                        case MIRRORED -> BezierHandleMode.ALIGNED;
+                        case ALIGNED -> BezierHandleMode.AUTO;
+                        case AUTO -> BezierHandleMode.FREE;
+                    };
+                    levelEditor.executeCommand(new UpdateSplinePointHandleModeCommand(levelEditor,
+                        levelEditor.getSelectedSplinePathId(), levelEditor.getSelectedSplinePointId(), nextMode));
+                    return true;
+                }
+                return false;
             case Input.Keys.TAB:
                 cycleBlocks();
                 return true;

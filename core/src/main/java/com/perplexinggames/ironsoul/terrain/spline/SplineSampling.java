@@ -6,6 +6,7 @@ import java.util.List;
 public final class SplineSampling {
     private static final SplineSampler LINEAR = new LinearSplineSampler();
     private static final SplineSampler CATMULL_ROM = new CatmullRomSplineSampler();
+    private static final SplineSampler BEZIER = new BezierSplineSampler();
 
     private SplineSampling() {
     }
@@ -17,7 +18,7 @@ public final class SplineSampling {
         return switch (splinePath.curveType == null ? SplineCurveType.LINEAR : splinePath.curveType) {
             case LINEAR -> LINEAR.sample(splinePath, sampleSpacing);
             case CATMULL_ROM -> CATMULL_ROM.sample(splinePath, sampleSpacing);
-            case BEZIER -> CATMULL_ROM.sample(splinePath, sampleSpacing);
+            case BEZIER -> BEZIER.sample(splinePath, sampleSpacing);
         };
     }
 }

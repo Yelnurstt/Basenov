@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.SerializationException;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.serialization.JsonLevelSerializer;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleMode;
 import com.perplexinggames.ironsoul.world.SpawnPointData;
 import com.perplexinggames.ironsoul.world.WorldBlockData;
 import com.perplexinggames.ironsoul.world.WorldData;
@@ -18,6 +19,17 @@ public class JsonWorldSerializer implements WorldSerializer {
     public JsonWorldSerializer() {
         json = new Json();
         json.setUsePrototypes(false);
+        json.setSerializer(BezierHandleMode.class, new Json.Serializer<>() {
+            @Override
+            public void write(Json json, BezierHandleMode object, Class knownType) {
+                json.writeValue(object == null ? BezierHandleMode.AUTO.name() : object.name());
+            }
+
+            @Override
+            public BezierHandleMode read(Json json, com.badlogic.gdx.utils.JsonValue jsonData, Class type) {
+                return BezierHandleMode.fromString(jsonData == null ? null : jsonData.asString(), BezierHandleMode.AUTO);
+            }
+        });
     }
 
     @Override

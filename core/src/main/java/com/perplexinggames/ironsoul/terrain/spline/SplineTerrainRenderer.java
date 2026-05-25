@@ -43,7 +43,7 @@ public class SplineTerrainRenderer {
     }
 
     public void renderDebug(ShapeRenderer shapeRenderer, OrthographicCamera camera, RuntimeLevel runtimeLevel,
-                            String selectedPathId, String selectedPointId) {
+                            String selectedPathId, String selectedPointId, BezierHandleType selectedHandleType) {
         List<SplinePath> paths = runtimeLevel.getSplinePaths();
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
@@ -57,6 +57,16 @@ public class SplineTerrainRenderer {
                 Vector2 current = samples.get(i).getPosition();
                 shapeRenderer.line(previous.x, previous.y, current.x, current.y);
             }
+            if (selectedPathId != null && selectedPathId.equals(splinePath.id) && splinePath.curveType == SplineCurveType.BEZIER) {
+                for (SplineControlPoint point : splinePath.getPoints()) {
+                    Vector2 anchor = point.getAnchorPosition();
+                    Vector2 inHandle = point.getInHandleWorldPosition();
+                    Vector2 outHandle = point.getOutHandleWorldPosition();
+                    shapeRenderer.setColor(new Color(1f, 0.6f, 0.2f, 0.75f));
+                    shapeRenderer.line(anchor.x, anchor.y, inHandle.x, inHandle.y);
+                    shapeRenderer.line(anchor.x, anchor.y, outHandle.x, outHandle.y);
+                }
+            }
         }
         shapeRenderer.end();
 
@@ -67,6 +77,16 @@ public class SplineTerrainRenderer {
                 boolean selected = selectedPointId != null && selectedPointId.equals(point.id);
                 shapeRenderer.setColor(selected ? new Color(1f, 0.45f, 0.2f, 1f) : new Color(1f, 0.9f, 0.25f, 1f));
                 shapeRenderer.circle(point.x, point.y, selected ? 7f : 5f, 16);
+                if (selectedPathId != null && selectedPathId.equals(splinePath.id) && splinePath.curveType == SplineCurveType.BEZIER) {
+                    boolean inSelected = selected && selectedHandleType == BezierHandleType.IN;
+                    boolean outSelected = selected && selectedHandleType == BezierHandleType.OUT;
+                    Vector2 inHandle = point.getInHandleWorldPosition();
+                    Vector2 outHandle = point.getOutHandleWorldPosition();
+                    shapeRenderer.setColor(inSelected ? new Color(1f, 0.2f, 0.2f, 1f) : new Color(0.95f, 0.65f, 0.3f, 1f));
+                    shapeRenderer.circle(inHandle.x, inHandle.y, inSelected ? 5f : 4f, 12);
+                    shapeRenderer.setColor(outSelected ? new Color(1f, 0.2f, 0.2f, 1f) : new Color(0.95f, 0.65f, 0.3f, 1f));
+                    shapeRenderer.circle(outHandle.x, outHandle.y, outSelected ? 5f : 4f, 12);
+                }
             }
         }
         shapeRenderer.end();
@@ -124,16 +144,18 @@ public class SplineTerrainRenderer {
     private void renderLayerSegments(SpriteBatch batch, OrthographicCamera camera, SplineLayer layer, List<SplineSample> samples) {
         Texture texture = resolveTexture(layer.spritePath);
         for (int i = 1; i < samples.size(); i++) {
-            Vector2 start = samples.get(i - 1).getPosition();
-            Vector2 end = samples.get(i).getPosition();
+            SplineSample previousSample = samples.get(i - 1);
+            SplineSample currentSample = samples.get(i);
+            Vector2 start = previousSample.getPosition();
+            Vector2 end = currentSample.getPosition();
             Vector2 segment = new Vector2(end).sub(start);
             float length = segment.len();
             if (length <= 0.001f) {
                 continue;
             }
 
-            Vector2 tangent = new Vector2(segment).nor();
-            Vector2 normal = new Vector2(-tangent.y, tangent.x);
+            Vector2 tangent = previousSample.getTangent();
+            Vector2 normal = previousSample.getNormal();
             Vector2 offset = new Vector2(normal).scl(layer.verticalOffset);
             Vector2 drawStart = applyParallax(new Vector2(start).add(offset), camera, layer.parallaxFactor);
             float rotation = tangent.angleDeg();

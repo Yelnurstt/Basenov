@@ -125,7 +125,8 @@ public class LevelEditorDemoScreen implements Screen {
                 levelEditor.getSelectedCell(),
                 levelEditor.getSelectedTerrainPoint(),
                 levelEditor.getSelectedSplinePathId(),
-                levelEditor.getSelectedSplinePointId()
+                levelEditor.getSelectedSplinePointId(),
+                levelEditor.getSelectedSplineHandleType()
             );
         } else {
             levelRenderer.renderGameplay(runtimeLevel, activeBlock, worldCamera);

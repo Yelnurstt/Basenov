@@ -3,6 +3,8 @@ package com.perplexinggames.ironsoul.level;
 import com.badlogic.gdx.math.MathUtils;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleMode;
+import com.perplexinggames.ironsoul.terrain.spline.BezierHandleService;
 import com.perplexinggames.ironsoul.terrain.spline.SplineControlPoint;
 import com.perplexinggames.ironsoul.terrain.spline.SplineCurveType;
 import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
@@ -475,10 +477,19 @@ public class RuntimeLevel {
             if (point == null || point.id == null || point.id.isEmpty()) {
                 continue;
             }
-            pointCopies.add(point.copy());
+            pointCopies.add(new SplineControlPoint(
+                point.id,
+                point.x,
+                point.y,
+                point.inHandleX,
+                point.inHandleY,
+                point.outHandleX,
+                point.outHandleY,
+                point.handleMode == null ? BezierHandleMode.AUTO : point.handleMode
+            ));
         }
 
-        return new SplinePath(
+        SplinePath sanitized = new SplinePath(
             splinePath.id,
             splinePath.name == null || splinePath.name.isBlank() ? splinePath.id : splinePath.name,
             pointCopies,
@@ -489,6 +500,8 @@ public class RuntimeLevel {
             splinePath.material == null ? "default" : splinePath.material,
             splinePath.physicsMaterial
         );
+        BezierHandleService.ensureValidHandles(sanitized);
+        return sanitized;
     }
 
     private SplineLayer sanitizeSplineLayer(SplineLayer splineLayer) {
@@ -559,7 +572,12 @@ public class RuntimeLevel {
             SplineControlPoint secondPoint = secondPoints.get(i);
             if (!firstPoint.id.equals(secondPoint.id)
                 || Float.compare(firstPoint.x, secondPoint.x) != 0
-                || Float.compare(firstPoint.y, secondPoint.y) != 0) {
+                || Float.compare(firstPoint.y, secondPoint.y) != 0
+                || Float.compare(firstPoint.inHandleX, secondPoint.inHandleX) != 0
+                || Float.compare(firstPoint.inHandleY, secondPoint.inHandleY) != 0
+                || Float.compare(firstPoint.outHandleX, secondPoint.outHandleX) != 0
+                || Float.compare(firstPoint.outHandleY, secondPoint.outHandleY) != 0
+                || firstPoint.handleMode != secondPoint.handleMode) {
                 return false;
             }
         }
@@ -654,7 +672,8 @@ public class RuntimeLevel {
                 if (Float.compare(clampedX, point.x) != 0 || Float.compare(clampedY, point.y) != 0) {
                     clampedPoints++;
                 }
-                clamped.add(new SplineControlPoint(point.id, clampedX, clampedY));
+                clamped.add(new SplineControlPoint(point.id, clampedX, clampedY,
+                    point.inHandleX, point.inHandleY, point.outHandleX, point.outHandleY, point.handleMode));
             }
             splinePaths.set(i, new SplinePath(
                 splinePath.id,
