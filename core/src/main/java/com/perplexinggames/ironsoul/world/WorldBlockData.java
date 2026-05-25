@@ -2,6 +2,8 @@ package com.perplexinggames.ironsoul.world;
 
 import com.perplexinggames.ironsoul.level.BlockData;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
+import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
+import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,6 +17,8 @@ public class WorldBlockData {
     public int height;
     public List<BlockData> tiles;
     public List<TerrainPath> terrain;
+    public List<SplinePath> splinePaths;
+    public List<SplineLayer> splineLayers;
     public List<WorldElementData> objects;
     public List<WorldElementData> enemies;
     public List<WorldElementData> rewards;
@@ -26,6 +30,8 @@ public class WorldBlockData {
     public WorldBlockData() {
         tiles = new ArrayList<>();
         terrain = new ArrayList<>();
+        splinePaths = new ArrayList<>();
+        splineLayers = new ArrayList<>();
         objects = new ArrayList<>();
         enemies = new ArrayList<>();
         rewards = new ArrayList<>();
@@ -53,6 +59,16 @@ public class WorldBlockData {
         for (TerrainPath terrainPath : terrain) {
             if (terrainPath != null) {
                 copy.terrain.add(terrainPath.copy());
+            }
+        }
+        for (SplinePath splinePath : splinePaths) {
+            if (splinePath != null) {
+                copy.splinePaths.add(splinePath.copy());
+            }
+        }
+        for (SplineLayer splineLayer : splineLayers) {
+            if (splineLayer != null) {
+                copy.splineLayers.add(splineLayer.copy());
             }
         }
         copyElements(objects, copy.objects);

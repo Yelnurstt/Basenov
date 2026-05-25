@@ -3,6 +3,12 @@ package com.perplexinggames.ironsoul.level;
 import com.badlogic.gdx.math.MathUtils;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.terrain.spline.SplineControlPoint;
+import com.perplexinggames.ironsoul.terrain.spline.SplineCurveType;
+import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
+import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
+import com.perplexinggames.ironsoul.terrain.spline.SplinePathLegacyAdapter;
+import com.perplexinggames.ironsoul.terrain.spline.SplineTileMode;
 import com.perplexinggames.ironsoul.world.WorldBlockData;
 
 import java.util.ArrayList;
@@ -20,10 +26,14 @@ public class RuntimeLevel {
     private int tileSize;
     private final LongMap<BlockData> blocks;
     private final List<TerrainPath> terrainPaths;
+    private final List<SplinePath> splinePaths;
+    private final List<SplineLayer> splineLayers;
 
     public RuntimeLevel(LevelData levelData) {
         this.blocks = new LongMap<>();
         this.terrainPaths = new ArrayList<>();
+        this.splinePaths = new ArrayList<>();
+        this.splineLayers = new ArrayList<>();
         apply(levelData);
     }
 
@@ -35,6 +45,8 @@ public class RuntimeLevel {
         tileSize = levelData.tileSize;
         blocks.clear();
         terrainPaths.clear();
+        splinePaths.clear();
+        splineLayers.clear();
 
         if (levelData.blocks != null) {
             for (BlockData block : levelData.blocks) {
@@ -77,6 +89,7 @@ public class RuntimeLevel {
         levelData.blocks.addAll(worldBlockData.tiles);
         levelData.terrainPaths.addAll(worldBlockData.terrain);
         apply(levelData);
+        setSplineData(worldBlockData.splinePaths, worldBlockData.splineLayers);
     }
 
     public List<BlockData> copyBlocks() {
@@ -96,6 +109,45 @@ public class RuntimeLevel {
         return copies;
     }
 
+    public List<SplinePath> copySplinePaths() {
+        List<SplinePath> copies = new ArrayList<>(splinePaths.size());
+        for (SplinePath splinePath : splinePaths) {
+            copies.add(splinePath.copy());
+        }
+        return copies;
+    }
+
+    public List<SplineLayer> copySplineLayers() {
+        List<SplineLayer> copies = new ArrayList<>(splineLayers.size());
+        for (SplineLayer splineLayer : splineLayers) {
+            copies.add(splineLayer.copy());
+        }
+        return copies;
+    }
+
+    public void setSplineData(List<SplinePath> runtimeSplinePaths, List<SplineLayer> runtimeSplineLayers) {
+        splinePaths.clear();
+        splineLayers.clear();
+
+        if (runtimeSplinePaths != null) {
+            for (SplinePath splinePath : runtimeSplinePaths) {
+                SplinePath sanitized = sanitizeSplinePath(splinePath);
+                if (sanitized != null) {
+                    splinePaths.add(sanitized);
+                }
+            }
+        }
+
+        if (runtimeSplineLayers != null) {
+            for (SplineLayer splineLayer : runtimeSplineLayers) {
+                SplineLayer sanitized = sanitizeSplineLayer(splineLayer);
+                if (sanitized != null) {
+                    splineLayers.add(sanitized);
+                }
+            }
+        }
+    }
+
     public ResizeResult resize(int newWidth, int newHeight) {
         ResizeResult result = new ResizeResult();
         if (newWidth <= 0 || newHeight <= 0) {
@@ -107,6 +159,7 @@ public class RuntimeLevel {
         height = newHeight;
         clampBlocks(result);
         clampTerrain(result);
+        clampSplineData(result);
         return result;
     }
 
@@ -160,6 +213,39 @@ public class RuntimeLevel {
         return Collections.unmodifiableList(terrainPaths);
     }
 
+    public List<SplinePath> getSplinePaths() {
+        return Collections.unmodifiableList(splinePaths);
+    }
+
+    public List<SplineLayer> getSplineLayers() {
+        return Collections.unmodifiableList(splineLayers);
+    }
+
+    public List<SplinePath> getEffectiveSplinePaths() {
+        if (!splinePaths.isEmpty()) {
+            return getSplinePaths();
+        }
+        List<SplinePath> legacySplinePaths = new ArrayList<>();
+        for (TerrainPath terrainPath : terrainPaths) {
+            SplinePath adapted = SplinePathLegacyAdapter.fromTerrainPath(terrainPath);
+            if (adapted != null) {
+                legacySplinePaths.add(adapted);
+            }
+        }
+        return legacySplinePaths;
+    }
+
+    public List<SplineLayer> getEffectiveSplineLayers() {
+        if (!splineLayers.isEmpty()) {
+            return getSplineLayers();
+        }
+        List<SplineLayer> legacySplineLayers = new ArrayList<>();
+        for (SplinePath splinePath : getEffectiveSplinePaths()) {
+            legacySplineLayers.add(SplinePathLegacyAdapter.createDefaultLayer(splinePath));
+        }
+        return legacySplineLayers;
+    }
+
     public TerrainPath getTerrainPath(String pathId) {
         if (pathId == null) {
             return null;
@@ -206,6 +292,100 @@ public class RuntimeLevel {
         return false;
     }
 
+    public SplinePath getSplinePath(String pathId) {
+        if (pathId == null) {
+            return null;
+        }
+        for (SplinePath splinePath : splinePaths) {
+            if (pathId.equals(splinePath.id)) {
+                return splinePath.copy();
+            }
+        }
+        return null;
+    }
+
+    public boolean setSplinePath(SplinePath splinePath) {
+        SplinePath sanitized = sanitizeSplinePath(splinePath);
+        if (sanitized == null) {
+            return false;
+        }
+        for (int i = 0; i < splinePaths.size(); i++) {
+            if (sanitized.id.equals(splinePaths.get(i).id)) {
+                if (splinePathsEqual(splinePaths.get(i), sanitized)) {
+                    return false;
+                }
+                splinePaths.set(i, sanitized);
+                return true;
+            }
+        }
+        splinePaths.add(sanitized);
+        return true;
+    }
+
+    public boolean removeSplinePath(String pathId) {
+        if (pathId == null) {
+            return false;
+        }
+        boolean removed = false;
+        for (int i = splinePaths.size() - 1; i >= 0; i--) {
+            if (pathId.equals(splinePaths.get(i).id)) {
+                splinePaths.remove(i);
+                removed = true;
+            }
+        }
+        if (removed) {
+            for (int i = splineLayers.size() - 1; i >= 0; i--) {
+                if (pathId.equals(splineLayers.get(i).parentSplinePathId)) {
+                    splineLayers.remove(i);
+                }
+            }
+        }
+        return removed;
+    }
+
+    public SplineLayer getSplineLayer(String layerId) {
+        if (layerId == null) {
+            return null;
+        }
+        for (SplineLayer splineLayer : splineLayers) {
+            if (layerId.equals(splineLayer.id)) {
+                return splineLayer.copy();
+            }
+        }
+        return null;
+    }
+
+    public boolean setSplineLayer(SplineLayer splineLayer) {
+        SplineLayer sanitized = sanitizeSplineLayer(splineLayer);
+        if (sanitized == null) {
+            return false;
+        }
+        for (int i = 0; i < splineLayers.size(); i++) {
+            if (sanitized.id.equals(splineLayers.get(i).id)) {
+                if (splineLayersEqual(splineLayers.get(i), sanitized)) {
+                    return false;
+                }
+                splineLayers.set(i, sanitized);
+                return true;
+            }
+        }
+        splineLayers.add(sanitized);
+        return true;
+    }
+
+    public boolean removeSplineLayer(String layerId) {
+        if (layerId == null) {
+            return false;
+        }
+        for (int i = 0; i < splineLayers.size(); i++) {
+            if (layerId.equals(splineLayers.get(i).id)) {
+                splineLayers.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public int getTerrainPathCount() {
         return terrainPaths.size();
     }
@@ -214,6 +394,14 @@ public class RuntimeLevel {
         int count = 0;
         for (TerrainPath terrainPath : terrainPaths) {
             count += terrainPath.getPoints().size();
+        }
+        return count;
+    }
+
+    public int getSplinePointCount() {
+        int count = 0;
+        for (SplinePath splinePath : splinePaths) {
+            count += splinePath.getPoints().size();
         }
         return count;
     }
@@ -277,6 +465,55 @@ public class RuntimeLevel {
         );
     }
 
+    private SplinePath sanitizeSplinePath(SplinePath splinePath) {
+        if (splinePath == null || splinePath.id == null || splinePath.id.isEmpty()) {
+            return null;
+        }
+
+        List<SplineControlPoint> pointCopies = new ArrayList<>();
+        for (SplineControlPoint point : splinePath.getPoints()) {
+            if (point == null || point.id == null || point.id.isEmpty()) {
+                continue;
+            }
+            pointCopies.add(point.copy());
+        }
+
+        return new SplinePath(
+            splinePath.id,
+            splinePath.name == null || splinePath.name.isBlank() ? splinePath.id : splinePath.name,
+            pointCopies,
+            splinePath.curveType == null ? SplineCurveType.LINEAR : splinePath.curveType,
+            splinePath.closed,
+            splinePath.collisionEnabled,
+            splinePath.collisionThickness <= 0f ? 4f : splinePath.collisionThickness,
+            splinePath.material == null ? "default" : splinePath.material,
+            splinePath.physicsMaterial
+        );
+    }
+
+    private SplineLayer sanitizeSplineLayer(SplineLayer splineLayer) {
+        if (splineLayer == null || splineLayer.id == null || splineLayer.id.isEmpty()
+            || splineLayer.parentSplinePathId == null || splineLayer.parentSplinePathId.isEmpty()) {
+            return null;
+        }
+
+        return new SplineLayer(
+            splineLayer.id,
+            splineLayer.parentSplinePathId,
+            splineLayer.name == null || splineLayer.name.isBlank() ? splineLayer.id : splineLayer.name,
+            splineLayer.spritePath,
+            splineLayer.textureRegionName,
+            splineLayer.renderDepth,
+            splineLayer.parallaxFactor == 0f ? 1f : splineLayer.parallaxFactor,
+            splineLayer.verticalOffset,
+            splineLayer.visualWidth <= 0f ? 32f : splineLayer.visualWidth,
+            splineLayer.tileMode == null ? SplineTileMode.STRETCH : splineLayer.tileMode,
+            splineLayer.getTint(),
+            splineLayer.visible,
+            splineLayer.collisionEnabled
+        );
+    }
+
     private boolean terrainPathsEqual(TerrainPath first, TerrainPath second) {
         if (!first.getId().equals(second.getId())) {
             return false;
@@ -300,6 +537,52 @@ public class RuntimeLevel {
             }
         }
         return true;
+    }
+
+    private boolean splinePathsEqual(SplinePath first, SplinePath second) {
+        if (!first.id.equals(second.id)
+            || !first.name.equals(second.name)
+            || first.curveType != second.curveType
+            || first.closed != second.closed
+            || first.collisionEnabled != second.collisionEnabled
+            || Float.compare(first.collisionThickness, second.collisionThickness) != 0) {
+            return false;
+        }
+
+        List<SplineControlPoint> firstPoints = first.getPoints();
+        List<SplineControlPoint> secondPoints = second.getPoints();
+        if (firstPoints.size() != secondPoints.size()) {
+            return false;
+        }
+        for (int i = 0; i < firstPoints.size(); i++) {
+            SplineControlPoint firstPoint = firstPoints.get(i);
+            SplineControlPoint secondPoint = secondPoints.get(i);
+            if (!firstPoint.id.equals(secondPoint.id)
+                || Float.compare(firstPoint.x, secondPoint.x) != 0
+                || Float.compare(firstPoint.y, secondPoint.y) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean splineLayersEqual(SplineLayer first, SplineLayer second) {
+        return first.id.equals(second.id)
+            && first.parentSplinePathId.equals(second.parentSplinePathId)
+            && first.name.equals(second.name)
+            && java.util.Objects.equals(first.spritePath, second.spritePath)
+            && java.util.Objects.equals(first.textureRegionName, second.textureRegionName)
+            && first.renderDepth == second.renderDepth
+            && Float.compare(first.parallaxFactor, second.parallaxFactor) == 0
+            && Float.compare(first.verticalOffset, second.verticalOffset) == 0
+            && Float.compare(first.visualWidth, second.visualWidth) == 0
+            && first.tileMode == second.tileMode
+            && Float.compare(first.tintR, second.tintR) == 0
+            && Float.compare(first.tintG, second.tintG) == 0
+            && Float.compare(first.tintB, second.tintB) == 0
+            && Float.compare(first.tintA, second.tintA) == 0
+            && first.visible == second.visible
+            && first.collisionEnabled == second.collisionEnabled;
     }
 
     private long pack(int x, int y) {
@@ -354,6 +637,40 @@ public class RuntimeLevel {
 
         if (clampedPoints > 0) {
             result.addWarning("Clamped " + clampedPoints + " terrain points to the resized block bounds.");
+        }
+    }
+
+    private void clampSplineData(ResizeResult result) {
+        float maxX = getPixelWidth();
+        float maxY = getPixelHeight();
+        int clampedPoints = 0;
+
+        for (int i = 0; i < splinePaths.size(); i++) {
+            SplinePath splinePath = splinePaths.get(i);
+            List<SplineControlPoint> clamped = new ArrayList<>(splinePath.getPoints().size());
+            for (SplineControlPoint point : splinePath.getPoints()) {
+                float clampedX = MathUtils.clamp(point.x, 0f, maxX);
+                float clampedY = MathUtils.clamp(point.y, 0f, maxY);
+                if (Float.compare(clampedX, point.x) != 0 || Float.compare(clampedY, point.y) != 0) {
+                    clampedPoints++;
+                }
+                clamped.add(new SplineControlPoint(point.id, clampedX, clampedY));
+            }
+            splinePaths.set(i, new SplinePath(
+                splinePath.id,
+                splinePath.name,
+                clamped,
+                splinePath.curveType,
+                splinePath.closed,
+                splinePath.collisionEnabled,
+                splinePath.collisionThickness,
+                splinePath.material,
+                splinePath.physicsMaterial
+            ));
+        }
+
+        if (clampedPoints > 0) {
+            result.addWarning("Clamped " + clampedPoints + " spline points to the resized block bounds.");
         }
     }
 

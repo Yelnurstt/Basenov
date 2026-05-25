@@ -2,6 +2,7 @@ package com.perplexinggames.ironsoul.level;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
@@ -10,14 +11,17 @@ import com.perplexinggames.ironsoul.terrain.TerrainCollisionData;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
 import com.perplexinggames.ironsoul.terrain.TerrainSegment;
+import com.perplexinggames.ironsoul.terrain.spline.SplineTerrainRenderer;
 import com.perplexinggames.ironsoul.world.GateData;
 import com.perplexinggames.ironsoul.world.SpawnPointData;
 import com.perplexinggames.ironsoul.world.WorldBlockData;
 import com.perplexinggames.ironsoul.world.WorldElementData;
 
 public class LevelRenderer {
+    private final SpriteBatch spriteBatch;
     private final ShapeRenderer shapeRenderer;
     private final TerrainCollisionBuilder terrainCollisionBuilder;
+    private final SplineTerrainRenderer splineTerrainRenderer;
     private final Color blockColor;
     private final Color gridColor;
     private final Color hoveredColor;
@@ -34,8 +38,10 @@ public class LevelRenderer {
     private final Color blockBoundsColor;
 
     public LevelRenderer() {
+        this.spriteBatch = new SpriteBatch();
         this.shapeRenderer = new ShapeRenderer();
         this.terrainCollisionBuilder = new TerrainCollisionBuilder();
+        this.splineTerrainRenderer = new SplineTerrainRenderer(24f);
         this.blockColor = new Color(0.24f, 0.27f, 0.30f, 1f);
         this.gridColor = new Color(0.38f, 0.44f, 0.48f, 0.65f);
         this.hoveredColor = new Color(1f, 0.84f, 0.2f, 1f);
@@ -53,6 +59,11 @@ public class LevelRenderer {
     }
 
     public void renderGameplay(RuntimeLevel runtimeLevel, WorldBlockData activeBlock, OrthographicCamera camera) {
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+        splineTerrainRenderer.renderBackgroundAndMain(spriteBatch, camera, runtimeLevel);
+        spriteBatch.end();
+
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         drawBlocks(runtimeLevel);
@@ -66,16 +77,35 @@ public class LevelRenderer {
         drawBlockBounds(runtimeLevel);
         drawGates(activeBlock);
         shapeRenderer.end();
+
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+        splineTerrainRenderer.renderMain(spriteBatch, camera, runtimeLevel);
+        spriteBatch.end();
+    }
+
+    public void renderGameplayForeground(RuntimeLevel runtimeLevel, OrthographicCamera camera) {
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+        splineTerrainRenderer.renderForeground(spriteBatch, camera, runtimeLevel);
+        spriteBatch.end();
     }
 
     public void renderEditor(RuntimeLevel runtimeLevel, WorldBlockData activeBlock, OrthographicCamera camera, GridPoint2 hoveredCell,
-                             GridPoint2 selectedCell, TerrainPoint selectedTerrainPoint) {
+                             GridPoint2 selectedCell, TerrainPoint selectedTerrainPoint,
+                             String selectedSplinePathId, String selectedSplinePointId) {
         renderGameplay(runtimeLevel, activeBlock, camera);
 
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        drawTerrainPoints(runtimeLevel, selectedTerrainPoint);
+        if (runtimeLevel.getSplinePaths().isEmpty()) {
+            drawTerrainPoints(runtimeLevel, selectedTerrainPoint);
+        }
         shapeRenderer.end();
+
+        if (!runtimeLevel.getSplinePaths().isEmpty()) {
+            splineTerrainRenderer.renderDebug(shapeRenderer, camera, runtimeLevel, selectedSplinePathId, selectedSplinePointId);
+        }
 
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
@@ -86,7 +116,9 @@ public class LevelRenderer {
     }
 
     public void dispose() {
+        spriteBatch.dispose();
         shapeRenderer.dispose();
+        splineTerrainRenderer.dispose();
     }
 
     private void drawBlocks(RuntimeLevel runtimeLevel) {

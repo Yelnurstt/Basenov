@@ -123,7 +123,9 @@ public class LevelEditorDemoScreen implements Screen {
                 worldCamera,
                 levelEditor.getHoveredCell(),
                 levelEditor.getSelectedCell(),
-                levelEditor.getSelectedTerrainPoint()
+                levelEditor.getSelectedTerrainPoint(),
+                levelEditor.getSelectedSplinePathId(),
+                levelEditor.getSelectedSplinePointId()
             );
         } else {
             levelRenderer.renderGameplay(runtimeLevel, activeBlock, worldCamera);
@@ -134,6 +136,8 @@ public class LevelEditorDemoScreen implements Screen {
         tank.render(batch);
         enemy.render(batch);
         batch.end();
+
+        levelRenderer.renderGameplayForeground(runtimeLevel, worldCamera);
 
         renderOverlay();
 
@@ -317,7 +321,8 @@ public class LevelEditorDemoScreen implements Screen {
             .append("MODE: EDITOR\n")
             .append("BLOCK: ").append(activeBlock == null ? "none" : activeBlock.id).append('\n')
             .append("SOLID: ").append(runtimeLevel.getBlockCount())
-            .append(" | TERRAIN: ").append(runtimeLevel.getTerrainPointCount()).append(" pts\n")
+            .append(" | TERRAIN: ").append(runtimeLevel.getTerrainPointCount()).append(" pts")
+            .append(" | SPLINE: ").append(runtimeLevel.getSplinePointCount()).append(" pts\n")
             .append("MMB drag: pan | Wheel: zoom | F1: gameplay | F3: show menu")
             .toString();
     }

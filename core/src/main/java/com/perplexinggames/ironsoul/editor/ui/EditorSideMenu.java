@@ -17,14 +17,25 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
+import com.perplexinggames.ironsoul.editor.command.AddSplineLayerCommand;
+import com.perplexinggames.ironsoul.editor.command.CreateSplinePathCommand;
+import com.perplexinggames.ironsoul.editor.command.DeleteSplinePathCommand;
+import com.perplexinggames.ironsoul.editor.command.RemoveSplineLayerCommand;
+import com.perplexinggames.ironsoul.editor.command.UpdateSplineLayerPropertiesCommand;
+import com.perplexinggames.ironsoul.editor.command.UpdateSplinePathPropertiesCommand;
 import com.perplexinggames.ironsoul.editor.tool.EditorToolStrategy;
 import com.perplexinggames.ironsoul.editor.tool.EraseBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.GateTool;
 import com.perplexinggames.ironsoul.editor.tool.PlaceBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.SelectBlockTool;
+import com.perplexinggames.ironsoul.editor.tool.SplineEditTool;
+import com.perplexinggames.ironsoul.editor.tool.SplinePenTool;
 import com.perplexinggames.ironsoul.editor.tool.SpawnPointTool;
-import com.perplexinggames.ironsoul.editor.tool.TerrainPointTool;
 import com.perplexinggames.ironsoul.editor.tool.WorldMarkerTool;
+import com.perplexinggames.ironsoul.terrain.spline.SplineCurveType;
+import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
+import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
+import com.perplexinggames.ironsoul.terrain.spline.SplineTileMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,8 +60,22 @@ public class EditorSideMenu {
     private final TextField blockHeightField;
     private final Label selectedGateLabel;
     private final Label selectedSpawnLabel;
+    private final SelectBox<String> splineSelect;
+    private final SelectBox<String> splineLayerSelect;
+    private final SelectBox<String> splineCurveSelect;
+    private final SelectBox<String> splineTileModeSelect;
+    private final TextField splineNameField;
+    private final TextField splineSpriteField;
+    private final TextField splineDepthField;
+    private final TextField splineParallaxField;
+    private final TextField splineWidthField;
+    private final TextField splineOffsetField;
+    private final TextField splineThicknessField;
+    private final Label splineSelectionLabel;
 
     private List<String> lastBlockIds = List.of();
+    private List<String> lastSplineIds = List.of();
+    private List<String> lastSplineLayerIds = List.of();
     private boolean menuVisible = true;
 
     private static class ToolButtonData {
@@ -157,6 +182,7 @@ public class EditorSideMenu {
         content.add(toolPanel).expandX().fillX().padBottom(8f).row();
 
         content.add(buildBlockPanel()).expandX().fillX().padBottom(8f).row();
+        content.add(buildSplinePanel()).expandX().fillX().padBottom(8f).row();
         content.add(buildGatePanel()).expandX().fillX().padBottom(8f).row();
 
         Table infoTable = createSection("Session");
@@ -189,6 +215,18 @@ public class EditorSideMenu {
         blockNameField = (TextField) content.findActor("blockNameField");
         blockWidthField = (TextField) content.findActor("blockWidthField");
         blockHeightField = (TextField) content.findActor("blockHeightField");
+        splineSelect = (SelectBox<String>) content.findActor("splineSelect");
+        splineLayerSelect = (SelectBox<String>) content.findActor("splineLayerSelect");
+        splineCurveSelect = (SelectBox<String>) content.findActor("splineCurveSelect");
+        splineTileModeSelect = (SelectBox<String>) content.findActor("splineTileModeSelect");
+        splineNameField = (TextField) content.findActor("splineNameField");
+        splineSpriteField = (TextField) content.findActor("splineSpriteField");
+        splineDepthField = (TextField) content.findActor("splineDepthField");
+        splineParallaxField = (TextField) content.findActor("splineParallaxField");
+        splineWidthField = (TextField) content.findActor("splineWidthField");
+        splineOffsetField = (TextField) content.findActor("splineOffsetField");
+        splineThicknessField = (TextField) content.findActor("splineThicknessField");
+        splineSelectionLabel = (Label) content.findActor("splineSelectionLabel");
         selectedGateLabel = (Label) content.findActor("selectedGateLabel");
         selectedSpawnLabel = (Label) content.findActor("selectedSpawnLabel");
     }
@@ -314,11 +352,269 @@ public class EditorSideMenu {
         return panel;
     }
 
+    private Table buildSplinePanel() {
+        Table panel = createSection("Spline Terrain");
+
+        Label selectionLabel = new Label("Spline: none", skin);
+        selectionLabel.setName("splineSelectionLabel");
+        selectionLabel.setWrap(true);
+        panel.add(selectionLabel).width(234f).left().padBottom(6f).row();
+
+        SelectBox<String> splineBox = new SelectBox<>(skin);
+        splineBox.setName("splineSelect");
+        splineBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                String selected = splineBox.getSelected();
+                if (selected != null && !"none".equals(selected)) {
+                    levelEditor.selectSplinePath(selected);
+                }
+            }
+        });
+        panel.add(createFieldLabel("Spline path")).left().padBottom(3f).row();
+        panel.add(splineBox).expandX().fillX().padBottom(6f).row();
+
+        SelectBox<String> layerBox = new SelectBox<>(skin);
+        layerBox.setName("splineLayerSelect");
+        layerBox.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                String selected = layerBox.getSelected();
+                if (selected != null && !"none".equals(selected)) {
+                    levelEditor.selectSplineLayer(selected);
+                }
+            }
+        });
+        panel.add(createFieldLabel("Spline layer")).left().padBottom(3f).row();
+        panel.add(layerBox).expandX().fillX().padBottom(6f).row();
+
+        TextField nameField = new TextField("", skin);
+        nameField.setName("splineNameField");
+        nameField.setMessageText("Spline name");
+        panel.add(createFieldLabel("Spline name")).left().padBottom(3f).row();
+        panel.add(nameField).expandX().fillX().padBottom(6f).row();
+
+        SelectBox<String> curveBox = new SelectBox<>(skin);
+        curveBox.setName("splineCurveSelect");
+        curveBox.setItems("LINEAR", "CATMULL_ROM", "BEZIER");
+        panel.add(createFieldLabel("Curve type")).left().padBottom(3f).row();
+        panel.add(curveBox).expandX().fillX().padBottom(6f).row();
+
+        TextField thicknessField = new TextField("", skin);
+        thicknessField.setName("splineThicknessField");
+        thicknessField.setMessageText("collision width");
+        panel.add(createFieldLabel("Collision thickness")).left().padBottom(3f).row();
+        panel.add(thicknessField).expandX().fillX().padBottom(6f).row();
+
+        TextField spriteField = new TextField("", skin);
+        spriteField.setName("splineSpriteField");
+        spriteField.setMessageText("assets path");
+        panel.add(createFieldLabel("Layer sprite")).left().padBottom(3f).row();
+        panel.add(spriteField).expandX().fillX().padBottom(6f).row();
+
+        TextField depthField = new TextField("", skin);
+        depthField.setName("splineDepthField");
+        depthField.setMessageText("0");
+        TextField parallaxField = new TextField("", skin);
+        parallaxField.setName("splineParallaxField");
+        parallaxField.setMessageText("1.0");
+        Table row1 = new Table();
+        row1.add(depthField).width(114f).padRight(6f);
+        row1.add(parallaxField).width(114f);
+        panel.add(createFieldLabel("Depth / parallax")).left().padBottom(3f).row();
+        panel.add(row1).left().padBottom(6f).row();
+
+        TextField widthField = new TextField("", skin);
+        widthField.setName("splineWidthField");
+        widthField.setMessageText("width");
+        TextField offsetField = new TextField("", skin);
+        offsetField.setName("splineOffsetField");
+        offsetField.setMessageText("offset");
+        Table row2 = new Table();
+        row2.add(widthField).width(114f).padRight(6f);
+        row2.add(offsetField).width(114f);
+        panel.add(createFieldLabel("Width / offset")).left().padBottom(3f).row();
+        panel.add(row2).left().padBottom(6f).row();
+
+        SelectBox<String> tileModeBox = new SelectBox<>(skin);
+        tileModeBox.setName("splineTileModeSelect");
+        tileModeBox.setItems("STRETCH", "REPEAT");
+        panel.add(createFieldLabel("Tile mode")).left().padBottom(3f).row();
+        panel.add(tileModeBox).expandX().fillX().padBottom(6f).row();
+
+        Table actionRow1 = new Table();
+        TextButton createButton = new TextButton("Create Path", skin);
+        createButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                String pathId = levelEditor.createSplinePathId();
+                String layerId = levelEditor.createSplineLayerId();
+                SplinePath path = levelEditor.createDefaultSplinePath(pathId, "Spline " + pathId);
+                SplineLayer layer = levelEditor.createDefaultSplineLayer(layerId, pathId, "Main Terrain", 0);
+                levelEditor.executeCommand(new CreateSplinePathCommand(levelEditor, path, layer));
+            }
+        });
+        TextButton deleteButton = new TextButton("Delete Path", skin);
+        deleteButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() != null) {
+                    levelEditor.executeCommand(new DeleteSplinePathCommand(levelEditor, levelEditor.getSelectedSplinePathId()));
+                }
+            }
+        });
+        actionRow1.add(createButton).width(114f).padRight(6f);
+        actionRow1.add(deleteButton).width(114f);
+        panel.add(actionRow1).left().padBottom(4f).row();
+
+        Table actionRow2 = new Table();
+        TextButton addLayerButton = new TextButton("Add Layer", skin);
+        addLayerButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() == null) {
+                    return;
+                }
+                String layerId = levelEditor.createSplineLayerId();
+                int nextDepth = levelEditor.getSplineLayersForPath(levelEditor.getSelectedSplinePathId()).size();
+                SplineLayer layer = levelEditor.createDefaultSplineLayer(layerId, levelEditor.getSelectedSplinePathId(),
+                    "Layer " + layerId, nextDepth);
+                levelEditor.executeCommand(new AddSplineLayerCommand(levelEditor, layer));
+            }
+        });
+        TextButton removeLayerButton = new TextButton("Remove Layer", skin);
+        removeLayerButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplineLayerId() != null) {
+                    levelEditor.executeCommand(new RemoveSplineLayerCommand(levelEditor, levelEditor.getSelectedSplineLayerId()));
+                }
+            }
+        });
+        actionRow2.add(addLayerButton).width(114f).padRight(6f);
+        actionRow2.add(removeLayerButton).width(114f);
+        panel.add(actionRow2).left().padBottom(4f).row();
+
+        Table actionRow3 = new Table();
+        TextButton applyPathButton = new TextButton("Apply Path", skin);
+        applyPathButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplinePathId() == null) {
+                    return;
+                }
+                SplinePath updated = levelEditor.updateSplinePathProperties(
+                    levelEditor.getSelectedSplinePathId(),
+                    nameField.getText(),
+                    SplineCurveType.valueOf(curveBox.getSelected()),
+                    levelEditor.getSelectedSplinePath() != null && levelEditor.getSelectedSplinePath().closed,
+                    levelEditor.getSelectedSplinePath() == null || levelEditor.getSelectedSplinePath().collisionEnabled,
+                    parseFloat(thicknessField.getText(), 4f),
+                    "editor-dirt"
+                );
+                if (updated != null) {
+                    levelEditor.executeCommand(new UpdateSplinePathPropertiesCommand(levelEditor, updated));
+                }
+            }
+        });
+        TextButton applyLayerButton = new TextButton("Apply Layer", skin);
+        applyLayerButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                if (levelEditor.getSelectedSplineLayerId() == null) {
+                    return;
+                }
+                SplineLayer updated = levelEditor.updateSplineLayerProperties(
+                    levelEditor.getSelectedSplineLayerId(),
+                    spriteField.getText(),
+                    parseInt(depthField.getText(), 0),
+                    parseFloat(parallaxField.getText(), 1f),
+                    parseFloat(offsetField.getText(), 0f),
+                    parseFloat(widthField.getText(), 32f),
+                    SplineTileMode.valueOf(tileModeBox.getSelected()),
+                    true,
+                    levelEditor.getSelectedSplineLayer() != null && levelEditor.getSelectedSplineLayer().collisionEnabled
+                );
+                if (updated != null) {
+                    levelEditor.executeCommand(new UpdateSplineLayerPropertiesCommand(levelEditor, updated));
+                }
+            }
+        });
+        actionRow3.add(applyPathButton).width(114f).padRight(6f);
+        actionRow3.add(applyLayerButton).width(114f);
+        panel.add(actionRow3).left().padBottom(4f).row();
+
+        Table actionRow4 = new Table();
+        TextButton toggleClosedButton = new TextButton("Toggle Closed", skin);
+        toggleClosedButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                SplinePath selectedPath = levelEditor.getSelectedSplinePath();
+                if (selectedPath == null) {
+                    return;
+                }
+                SplinePath updated = selectedPath.copy();
+                updated.closed = !updated.closed;
+                levelEditor.executeCommand(new UpdateSplinePathPropertiesCommand(levelEditor, updated));
+            }
+        });
+        TextButton toggleVisibleButton = new TextButton("Toggle Visible", skin);
+        toggleVisibleButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                SplineLayer selectedLayer = levelEditor.getSelectedSplineLayer();
+                if (selectedLayer == null) {
+                    return;
+                }
+                SplineLayer updated = selectedLayer.copy();
+                updated.visible = !updated.visible;
+                levelEditor.executeCommand(new UpdateSplineLayerPropertiesCommand(levelEditor, updated));
+            }
+        });
+        actionRow4.add(toggleClosedButton).width(114f).padRight(6f);
+        actionRow4.add(toggleVisibleButton).width(114f);
+        panel.add(actionRow4).left().padBottom(4f).row();
+
+        Table actionRow5 = new Table();
+        TextButton togglePathCollisionButton = new TextButton("Path Collision", skin);
+        togglePathCollisionButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                SplinePath selectedPath = levelEditor.getSelectedSplinePath();
+                if (selectedPath == null) {
+                    return;
+                }
+                SplinePath updated = selectedPath.copy();
+                updated.collisionEnabled = !updated.collisionEnabled;
+                levelEditor.executeCommand(new UpdateSplinePathPropertiesCommand(levelEditor, updated));
+            }
+        });
+        TextButton toggleLayerCollisionButton = new TextButton("Layer Collision", skin);
+        toggleLayerCollisionButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                SplineLayer selectedLayer = levelEditor.getSelectedSplineLayer();
+                if (selectedLayer == null) {
+                    return;
+                }
+                SplineLayer updated = selectedLayer.copy();
+                updated.collisionEnabled = !updated.collisionEnabled;
+                levelEditor.executeCommand(new UpdateSplineLayerPropertiesCommand(levelEditor, updated));
+            }
+        });
+        actionRow5.add(togglePathCollisionButton).width(114f).padRight(6f);
+        actionRow5.add(toggleLayerCollisionButton).width(114f);
+        panel.add(actionRow5).left();
+
+        return panel;
+    }
+
     private void initToolData() {
         toolDataList.add(new ToolButtonData("place", "Place", "1", "Click to place a solid tile.", EditorMode.EDITOR, PlaceBlockTool::new));
         toolDataList.add(new ToolButtonData("erase", "Delete", "2", "Click to erase solid tiles.", EditorMode.EDITOR, EraseBlockTool::new));
         toolDataList.add(new ToolButtonData("select", "Select", "3", "Click to select a solid tile.", EditorMode.EDITOR, SelectBlockTool::new));
-        toolDataList.add(new ToolButtonData("terrain", "Terrain", "4", "LMB add/move point, RMB remove.", EditorMode.EDITOR, TerrainPointTool::new));
+        toolDataList.add(new ToolButtonData("splinePen", "Spline Pen", "4", "LMB add control points. RMB deletes selected point.", EditorMode.EDITOR, SplinePenTool::new));
+        toolDataList.add(new ToolButtonData("splineEdit", "Spline Edit", "Q", "Drag spline control points to reshape all layers.", EditorMode.EDITOR, SplineEditTool::new));
         toolDataList.add(new ToolButtonData("gate", "Gate", "5", "Click to create/select a gate.", EditorMode.EDITOR, GateTool::new));
         toolDataList.add(new ToolButtonData("spawn", "Spawn", "6", "Click to create or move a spawn point.", EditorMode.EDITOR, SpawnPointTool::new));
         toolDataList.add(new ToolButtonData("object", "Object", "7", "Click to place a generic world object.", EditorMode.EDITOR,
@@ -403,6 +699,7 @@ public class EditorSideMenu {
 
         hintLabel.setText(activeData == null ? "Hint: Select a tool." : "Hint: " + activeData.hint);
         syncBlockEditor();
+        syncSplineEditor();
         syncGateEditor();
     }
 
@@ -450,9 +747,86 @@ public class EditorSideMenu {
         }
     }
 
+    private void syncSplineEditor() {
+        List<String> splineIds = new ArrayList<>();
+        for (SplinePath splinePath : levelEditor.getSplinePaths()) {
+            splineIds.add(splinePath.id);
+        }
+        if (splineIds.isEmpty()) {
+            splineIds = List.of("none");
+        }
+        if (!splineIds.equals(lastSplineIds)) {
+            lastSplineIds = new ArrayList<>(splineIds);
+            splineSelect.setItems(new Array<>(splineIds.toArray(new String[0])));
+        }
+
+        if (levelEditor.getSelectedSplinePathId() != null && splineSelect.getItems().contains(levelEditor.getSelectedSplinePathId(), false)) {
+            splineSelect.setSelected(levelEditor.getSelectedSplinePathId());
+        }
+
+        List<String> layerIds = new ArrayList<>();
+        if (levelEditor.getSelectedSplinePathId() != null) {
+            for (SplineLayer layer : levelEditor.getSplineLayersForPath(levelEditor.getSelectedSplinePathId())) {
+                layerIds.add(layer.id);
+            }
+        }
+        if (layerIds.isEmpty()) {
+            layerIds = List.of("none");
+        }
+        if (!layerIds.equals(lastSplineLayerIds)) {
+            lastSplineLayerIds = new ArrayList<>(layerIds);
+            splineLayerSelect.setItems(new Array<>(layerIds.toArray(new String[0])));
+        }
+        if (levelEditor.getSelectedSplineLayerId() != null && splineLayerSelect.getItems().contains(levelEditor.getSelectedSplineLayerId(), false)) {
+            splineLayerSelect.setSelected(levelEditor.getSelectedSplineLayerId());
+        }
+
+        SplinePath selectedPath = levelEditor.getSelectedSplinePath();
+        if (selectedPath == null) {
+            splineSelectionLabel.setText("Spline: none");
+        } else {
+            splineSelectionLabel.setText("Spline: " + selectedPath.name + " | " + selectedPath.getPoints().size() + " pts");
+            if (stage.getKeyboardFocus() != splineNameField) {
+                splineNameField.setText(selectedPath.name);
+            }
+            if (stage.getKeyboardFocus() != splineThicknessField) {
+                splineThicknessField.setText(String.valueOf(selectedPath.collisionThickness));
+            }
+            splineCurveSelect.setSelected((selectedPath.curveType == null ? SplineCurveType.LINEAR : selectedPath.curveType).name());
+        }
+
+        SplineLayer selectedLayer = levelEditor.getSelectedSplineLayer();
+        if (selectedLayer != null) {
+            if (stage.getKeyboardFocus() != splineSpriteField) {
+                splineSpriteField.setText(selectedLayer.spritePath == null ? "" : selectedLayer.spritePath);
+            }
+            if (stage.getKeyboardFocus() != splineDepthField) {
+                splineDepthField.setText(String.valueOf(selectedLayer.renderDepth));
+            }
+            if (stage.getKeyboardFocus() != splineParallaxField) {
+                splineParallaxField.setText(String.valueOf(selectedLayer.parallaxFactor));
+            }
+            if (stage.getKeyboardFocus() != splineWidthField) {
+                splineWidthField.setText(String.valueOf(selectedLayer.visualWidth));
+            }
+            if (stage.getKeyboardFocus() != splineOffsetField) {
+                splineOffsetField.setText(String.valueOf(selectedLayer.verticalOffset));
+            }
+            splineTileModeSelect.setSelected((selectedLayer.tileMode == null ? SplineTileMode.STRETCH : selectedLayer.tileMode).name());
+        }
+    }
+
     private int parseInt(String text, int fallback) {
         try {
             return Integer.parseInt(text.trim());
+        } catch (Exception exception) {
+            return fallback;
+        }
+    }
+
+    private float parseFloat(String text, float fallback) {
+        try {
+            return Float.parseFloat(text.trim());
         } catch (Exception exception) {
             return fallback;
         }

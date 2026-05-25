@@ -4,6 +4,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.perplexinggames.ironsoul.tank.controller.FacingDirection;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.terrain.spline.SplineControlPoint;
+import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
 import com.perplexinggames.ironsoul.world.SpawnPointData;
 import com.perplexinggames.ironsoul.world.WorldBlockData;
 
@@ -52,6 +54,14 @@ public final class WorldSpawnResolver {
                 globalHighestY = Math.max(globalHighestY, point.getY());
                 if (Math.abs(point.getX() - preferredX) <= probeRadius) {
                     localHighestY = Math.max(localHighestY, point.getY());
+                }
+            }
+        }
+        for (SplinePath splinePath : block.splinePaths) {
+            for (SplineControlPoint point : splinePath.getPoints()) {
+                globalHighestY = Math.max(globalHighestY, point.y);
+                if (Math.abs(point.x - preferredX) <= probeRadius) {
+                    localHighestY = Math.max(localHighestY, point.y);
                 }
             }
         }

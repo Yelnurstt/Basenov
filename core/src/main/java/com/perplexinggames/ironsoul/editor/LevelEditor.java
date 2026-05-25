@@ -22,6 +22,11 @@ import com.perplexinggames.ironsoul.level.BlockType;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.terrain.TerrainPoint;
+import com.perplexinggames.ironsoul.terrain.spline.SplineControlPoint;
+import com.perplexinggames.ironsoul.terrain.spline.SplineCurveType;
+import com.perplexinggames.ironsoul.terrain.spline.SplineLayer;
+import com.perplexinggames.ironsoul.terrain.spline.SplinePath;
+import com.perplexinggames.ironsoul.terrain.spline.SplineTileMode;
 import com.perplexinggames.ironsoul.tank.controller.FacingDirection;
 import com.perplexinggames.ironsoul.world.GateData;
 import com.perplexinggames.ironsoul.world.GateDirection;
@@ -74,6 +79,9 @@ public class LevelEditor implements EditorToolController {
     private GridPoint2 hoveredCell;
     private GridPoint2 selectedCell;
     private String selectedTerrainPointId;
+    private String selectedSplinePathId;
+    private String selectedSplinePointId;
+    private String selectedSplineLayerId;
     private String selectedGateId;
     private String selectedSpawnPointId;
     private String lastStatusMessage;
@@ -81,6 +89,9 @@ public class LevelEditor implements EditorToolController {
     private boolean lastLoadEmptyFallback;
     private boolean terrainSnapToGrid;
     private int terrainPointSequence;
+    private int splinePathSequence;
+    private int splinePointSequence;
+    private int splineLayerSequence;
     private int blockSequence;
     private int gateSequence;
     private int spawnSequence;
@@ -183,6 +194,34 @@ public class LevelEditor implements EditorToolController {
         return findTerrainPointById(selectedTerrainPointId);
     }
 
+    public SplinePath getSelectedSplinePath() {
+        return runtimeLevel.getSplinePath(selectedSplinePathId);
+    }
+
+    public SplineLayer getSelectedSplineLayer() {
+        return runtimeLevel.getSplineLayer(selectedSplineLayerId);
+    }
+
+    public SplineControlPoint getSelectedSplinePoint() {
+        return findSplinePointById(selectedSplinePointId);
+    }
+
+    public String getSelectedSplinePathId() {
+        return selectedSplinePathId;
+    }
+
+    public String getSelectedSplinePointId() {
+        return selectedSplinePointId;
+    }
+
+    public String getSelectedSplineLayerId() {
+        return selectedSplineLayerId;
+    }
+
+    public String findSplinePathIdForPoint(String pointId) {
+        return findSplinePathIdByPointId(pointId);
+    }
+
     public GateData getSelectedGate() {
         WorldBlockData block = getActiveBlock();
         if (block == null || selectedGateId == null) {
@@ -257,6 +296,48 @@ public class LevelEditor implements EditorToolController {
         }
     }
 
+    public void selectSplinePath(String pathId) {
+        selectedSplinePathId = pathId;
+        if (pathId == null) {
+            updateStatus("Spline selection cleared");
+            return;
+        }
+        SplinePath splinePath = runtimeLevel.getSplinePath(pathId);
+        if (splinePath != null) {
+            if (selectedSplineLayerId == null || runtimeLevel.getSplineLayer(selectedSplineLayerId) == null
+                || !pathId.equals(runtimeLevel.getSplineLayer(selectedSplineLayerId).parentSplinePathId)) {
+                List<SplineLayer> pathLayers = getSplineLayersForPath(pathId);
+                selectedSplineLayerId = pathLayers.isEmpty() ? null : pathLayers.get(0).id;
+            }
+            updateStatus("Selected spline " + splinePath.name);
+        }
+    }
+
+    public void selectSplinePoint(String pointId) {
+        selectedSplinePointId = pointId;
+        if (pointId == null) {
+            updateStatus("Spline point selection cleared");
+            return;
+        }
+        SplineControlPoint point = findSplinePointById(pointId);
+        if (point != null) {
+            updateStatus("Selected spline point " + point.id);
+        }
+    }
+
+    public void selectSplineLayer(String layerId) {
+        selectedSplineLayerId = layerId;
+        if (layerId == null) {
+            updateStatus("Spline layer selection cleared");
+            return;
+        }
+        SplineLayer layer = runtimeLevel.getSplineLayer(layerId);
+        if (layer != null) {
+            selectedSplinePathId = layer.parentSplinePathId;
+            updateStatus("Selected spline layer " + layer.name);
+        }
+    }
+
     public void selectGate(String gateId) {
         selectedGateId = gateId;
         if (gateId != null) {
@@ -289,9 +370,42 @@ public class LevelEditor implements EditorToolController {
         return closestPoint;
     }
 
+    public SplineControlPoint findSplinePointNear(float worldX, float worldY) {
+        Vector2 target = new Vector2(worldX, worldY);
+        float maxDistance = runtimeLevel.getTileSize() * TERRAIN_POINT_PICK_RADIUS_CELLS;
+        SplineControlPoint closestPoint = null;
+        float closestDistance = Float.MAX_VALUE;
+
+        for (SplinePath splinePath : runtimeLevel.getSplinePaths()) {
+            for (SplineControlPoint point : splinePath.getPoints()) {
+                float distance = target.dst(point.x, point.y);
+                if (distance <= maxDistance && distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPoint = point.copy();
+                }
+            }
+        }
+        return closestPoint;
+    }
+
     public String createTerrainPointId() {
         terrainPointSequence++;
         return "terrain-point-" + terrainPointSequence;
+    }
+
+    public String createSplinePathId() {
+        splinePathSequence++;
+        return "spline-path-" + splinePathSequence;
+    }
+
+    public String createSplinePointId() {
+        splinePointSequence++;
+        return "spline-point-" + splinePointSequence;
+    }
+
+    public String createSplineLayerId() {
+        splineLayerSequence++;
+        return "spline-layer-" + splineLayerSequence;
     }
 
     public TerrainPath getPrimaryTerrainPath() {
@@ -377,6 +491,154 @@ public class LevelEditor implements EditorToolController {
         return changed;
     }
 
+    public List<SplinePath> getSplinePaths() {
+        return runtimeLevel.copySplinePaths();
+    }
+
+    public List<SplineLayer> getSplineLayersForPath(String pathId) {
+        List<SplineLayer> layers = new ArrayList<>();
+        for (SplineLayer layer : runtimeLevel.getSplineLayers()) {
+            if (layer != null && pathId != null && pathId.equals(layer.parentSplinePathId)) {
+                layers.add(layer.copy());
+            }
+        }
+        layers.sort(Comparator.comparingInt(layer -> layer.renderDepth));
+        return layers;
+    }
+
+    public SplinePath buildSplinePathWithAddedPoint(String pathId, String pointId, float worldX, float worldY) {
+        SplinePath currentPath = runtimeLevel.getSplinePath(pathId);
+        if (currentPath == null) {
+            return null;
+        }
+        List<SplineControlPoint> points = copySplinePoints(currentPath.getPoints());
+        Vector2 position = resolveTerrainPointPosition(worldX, worldY);
+        points.add(new SplineControlPoint(pointId, position.x, position.y));
+        return copySplinePathWithPoints(currentPath, points);
+    }
+
+    public SplinePath buildSplinePathWithMovedPoint(String pathId, String pointId, float worldX, float worldY) {
+        SplinePath currentPath = runtimeLevel.getSplinePath(pathId);
+        if (currentPath == null) {
+            return null;
+        }
+        List<SplineControlPoint> points = new ArrayList<>();
+        Vector2 position = resolveTerrainPointPosition(worldX, worldY);
+        boolean changed = false;
+        for (SplineControlPoint point : currentPath.getPoints()) {
+            if (point.id.equals(pointId)) {
+                points.add(new SplineControlPoint(pointId, position.x, position.y));
+                changed = true;
+            } else {
+                points.add(point.copy());
+            }
+        }
+        return changed ? copySplinePathWithPoints(currentPath, points) : null;
+    }
+
+    public SplinePath buildSplinePathWithRemovedPoint(String pathId, String pointId) {
+        SplinePath currentPath = runtimeLevel.getSplinePath(pathId);
+        if (currentPath == null) {
+            return null;
+        }
+        List<SplineControlPoint> points = new ArrayList<>();
+        boolean removed = false;
+        for (SplineControlPoint point : currentPath.getPoints()) {
+            if (point.id.equals(pointId)) {
+                removed = true;
+                continue;
+            }
+            points.add(point.copy());
+        }
+        return removed ? copySplinePathWithPoints(currentPath, points) : null;
+    }
+
+    public boolean replaceSplinePath(SplinePath splinePath) {
+        if (splinePath == null) {
+            return false;
+        }
+        boolean changed = runtimeLevel.setSplinePath(splinePath);
+        if (changed) {
+            syncLoadedBlockFromRuntimeLevel();
+            validateWorld();
+        }
+        return changed;
+    }
+
+    public boolean deleteSplinePath(String pathId) {
+        boolean changed = runtimeLevel.removeSplinePath(pathId);
+        if (changed) {
+            if (pathId != null && pathId.equals(selectedSplinePathId)) {
+                selectedSplinePathId = null;
+                selectedSplinePointId = null;
+                selectedSplineLayerId = null;
+            }
+            syncLoadedBlockFromRuntimeLevel();
+            validateWorld();
+        }
+        return changed;
+    }
+
+    public boolean replaceSplineLayer(SplineLayer splineLayer) {
+        boolean changed = runtimeLevel.setSplineLayer(splineLayer);
+        if (changed) {
+            syncLoadedBlockFromRuntimeLevel();
+            validateWorld();
+        }
+        return changed;
+    }
+
+    public boolean deleteSplineLayer(String layerId) {
+        boolean changed = runtimeLevel.removeSplineLayer(layerId);
+        if (changed) {
+            if (layerId != null && layerId.equals(selectedSplineLayerId)) {
+                selectedSplineLayerId = null;
+            }
+            syncLoadedBlockFromRuntimeLevel();
+            validateWorld();
+        }
+        return changed;
+    }
+
+    public SplinePath createDefaultSplinePath(String pathId, String name) {
+        return new SplinePath(pathId, name, new ArrayList<>(), SplineCurveType.LINEAR, false, true, 4f,
+            "editor-dirt", "editor-dirt");
+    }
+
+    public SplineLayer createDefaultSplineLayer(String layerId, String pathId, String name, int renderDepth) {
+        return new SplineLayer(layerId, pathId, name, null, null, renderDepth, 1f, 0f, runtimeLevel.getTileSize(),
+            SplineTileMode.STRETCH, com.badlogic.gdx.graphics.Color.WHITE, true, renderDepth == 0);
+    }
+
+    public SplinePath updateSplinePathProperties(String pathId, String name, SplineCurveType curveType, boolean closed,
+                                                 boolean collisionEnabled, float collisionThickness, String material) {
+        SplinePath existing = runtimeLevel.getSplinePath(pathId);
+        if (existing == null) {
+            return null;
+        }
+        return new SplinePath(existing.id, name, copySplinePoints(existing.getPoints()), curveType, closed, collisionEnabled,
+            collisionThickness, material, existing.physicsMaterial);
+    }
+
+    public SplineLayer updateSplineLayerProperties(String layerId, String spritePath, int renderDepth, float parallaxFactor,
+                                                   float verticalOffset, float visualWidth, SplineTileMode tileMode,
+                                                   boolean visible, boolean collisionEnabled) {
+        SplineLayer existing = runtimeLevel.getSplineLayer(layerId);
+        if (existing == null) {
+            return null;
+        }
+        SplineLayer updated = existing.copy();
+        updated.spritePath = spritePath;
+        updated.renderDepth = renderDepth;
+        updated.parallaxFactor = parallaxFactor;
+        updated.verticalOffset = verticalOffset;
+        updated.visualWidth = visualWidth;
+        updated.tileMode = tileMode;
+        updated.visible = visible;
+        updated.collisionEnabled = collisionEnabled;
+        return updated;
+    }
+
     public boolean placeBlock(int gridX, int gridY, BlockType blockType) {
         boolean changed = runtimeLevel.setBlock(gridX, gridY, blockType);
         if (changed) {
@@ -445,6 +707,16 @@ public class LevelEditor implements EditorToolController {
             return true;
         }
 
+        SplineControlPoint splinePoint = findSplinePointNear(worldX, worldY);
+        String splinePathId = splinePoint == null ? null : findSplinePathIdByPointId(splinePoint.id);
+        if (splinePoint != null && splinePathId != null) {
+            boolean removed = replaceSplinePath(buildSplinePathWithRemovedPoint(splinePathId, splinePoint.id));
+            if (removed && splinePoint.id.equals(selectedSplinePointId)) {
+                selectedSplinePointId = null;
+            }
+            return removed;
+        }
+
         TerrainPoint terrainPoint = findTerrainPointNear(worldX, worldY);
         if (terrainPoint != null) {
             boolean removed = replacePrimaryTerrainPath(buildPrimaryTerrainPathWithRemovedPoint(terrainPoint.getId()));
@@ -487,9 +759,13 @@ public class LevelEditor implements EditorToolController {
         runtimeLevel.apply(getActiveBlock(), worldData.tileSize);
         selectedCell = null;
         selectedTerrainPointId = null;
+        selectedSplinePathId = null;
+        selectedSplinePointId = null;
+        selectedSplineLayerId = null;
         selectedGateId = null;
         selectedSpawnPointId = null;
         terrainPointSequence = runtimeLevel.getTerrainPointCount();
+        splinePointSequence = runtimeLevel.getSplinePointCount();
         rebuildSequences();
         validateWorld();
         eventBus.post(new LevelLoadedEvent(sourceDescription, runtimeLevel.getBlockCount(), emptyFallback));
@@ -562,6 +838,9 @@ public class LevelEditor implements EditorToolController {
         runtimeLevel.apply(getActiveBlock(), worldData.tileSize);
         selectedCell = null;
         selectedTerrainPointId = null;
+        selectedSplinePathId = null;
+        selectedSplinePointId = null;
+        selectedSplineLayerId = null;
         selectedGateId = null;
         selectedSpawnPointId = null;
         updateStatus("Active block: " + blockId);
@@ -838,6 +1117,34 @@ public class LevelEditor implements EditorToolController {
         return null;
     }
 
+    private SplineControlPoint findSplinePointById(String pointId) {
+        if (pointId == null) {
+            return null;
+        }
+        for (SplinePath splinePath : runtimeLevel.getSplinePaths()) {
+            for (SplineControlPoint point : splinePath.getPoints()) {
+                if (pointId.equals(point.id)) {
+                    return point.copy();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String findSplinePathIdByPointId(String pointId) {
+        if (pointId == null) {
+            return null;
+        }
+        for (SplinePath splinePath : runtimeLevel.getSplinePaths()) {
+            for (SplineControlPoint point : splinePath.getPoints()) {
+                if (pointId.equals(point.id)) {
+                    return splinePath.id;
+                }
+            }
+        }
+        return null;
+    }
+
     private Vector2 resolveTerrainPointPosition(float worldX, float worldY) {
         if (!terrainSnapToGrid) {
             return new Vector2(worldX, worldY);
@@ -863,9 +1170,31 @@ public class LevelEditor implements EditorToolController {
         );
     }
 
+    private SplinePath copySplinePathWithPoints(SplinePath sourcePath, List<SplineControlPoint> points) {
+        return new SplinePath(
+            sourcePath.id,
+            sourcePath.name,
+            points,
+            sourcePath.curveType,
+            sourcePath.closed,
+            sourcePath.collisionEnabled,
+            sourcePath.collisionThickness,
+            sourcePath.material,
+            sourcePath.physicsMaterial
+        );
+    }
+
     private List<TerrainPoint> copyPoints(List<TerrainPoint> sourcePoints) {
         List<TerrainPoint> copies = new ArrayList<>(sourcePoints.size());
         for (TerrainPoint sourcePoint : sourcePoints) {
+            copies.add(sourcePoint.copy());
+        }
+        return copies;
+    }
+
+    private List<SplineControlPoint> copySplinePoints(List<SplineControlPoint> sourcePoints) {
+        List<SplineControlPoint> copies = new ArrayList<>(sourcePoints.size());
+        for (SplineControlPoint sourcePoint : sourcePoints) {
             copies.add(sourcePoint.copy());
         }
         return copies;
@@ -902,6 +1231,8 @@ public class LevelEditor implements EditorToolController {
         loadedBlock.height = runtimeLevel.getHeight();
         loadedBlock.tiles = runtimeLevel.copyBlocks();
         loadedBlock.terrain = runtimeLevel.copyTerrainPaths();
+        loadedBlock.splinePaths = runtimeLevel.copySplinePaths();
+        loadedBlock.splineLayers = runtimeLevel.copySplineLayers();
     }
 
     private void validateWorld() {
@@ -959,10 +1290,14 @@ public class LevelEditor implements EditorToolController {
         gateSequence = 0;
         spawnSequence = 0;
         markerSequence = 0;
+        splinePathSequence = 0;
+        splineLayerSequence = 0;
         for (WorldBlockData block : worldData.worldBlocks) {
             gateSequence += block.gates.size();
             spawnSequence += block.spawnPoints.size();
             markerSequence += block.objects.size() + block.enemies.size() + block.rewards.size() + block.triggers.size();
+            splinePathSequence += block.splinePaths.size();
+            splineLayerSequence += block.splineLayers.size();
         }
     }
 

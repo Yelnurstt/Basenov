@@ -103,6 +103,12 @@ public class JsonWorldSerializer implements WorldSerializer {
             if (block.terrain == null) {
                 block.terrain = new ArrayList<>();
             }
+            if (block.splinePaths == null) {
+                block.splinePaths = new ArrayList<>();
+            }
+            if (block.splineLayers == null) {
+                block.splineLayers = new ArrayList<>();
+            }
             if (block.objects == null) {
                 block.objects = new ArrayList<>();
             }
@@ -141,6 +147,8 @@ public class JsonWorldSerializer implements WorldSerializer {
     private String sanitizeLegacyCollectionWrappers(String raw) {
         String sanitized = unwrapListField(raw, "points");
         sanitized = unwrapListField(sanitized, "terrain");
+        sanitized = unwrapListField(sanitized, "splinePaths");
+        sanitized = unwrapListField(sanitized, "splineLayers");
         sanitized = unwrapListField(sanitized, "tiles");
         sanitized = unwrapListField(sanitized, "objects");
         sanitized = unwrapListField(sanitized, "enemies");

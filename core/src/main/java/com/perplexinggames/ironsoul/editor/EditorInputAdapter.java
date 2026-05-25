@@ -10,12 +10,14 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.utils.UIUtils;
 import com.perplexinggames.ironsoul.editor.command.LoadLevelCommand;
 import com.perplexinggames.ironsoul.editor.command.SaveLevelCommand;
+import com.perplexinggames.ironsoul.editor.command.DeleteSplinePointCommand;
 import com.perplexinggames.ironsoul.editor.tool.EraseBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.GateTool;
 import com.perplexinggames.ironsoul.editor.tool.PlaceBlockTool;
 import com.perplexinggames.ironsoul.editor.tool.SelectBlockTool;
+import com.perplexinggames.ironsoul.editor.tool.SplineEditTool;
+import com.perplexinggames.ironsoul.editor.tool.SplinePenTool;
 import com.perplexinggames.ironsoul.editor.tool.SpawnPointTool;
-import com.perplexinggames.ironsoul.editor.tool.TerrainPointTool;
 import com.perplexinggames.ironsoul.editor.tool.WorldMarkerTool;
 
 import java.util.List;
@@ -78,7 +80,10 @@ public class EditorInputAdapter extends InputAdapter {
                 levelEditor.setTool(new SelectBlockTool());
                 return true;
             case Input.Keys.NUM_4:
-                levelEditor.setTool(new TerrainPointTool());
+                levelEditor.setTool(new SplinePenTool());
+                return true;
+            case Input.Keys.Q:
+                levelEditor.setTool(new SplineEditTool());
                 return true;
             case Input.Keys.NUM_5:
                 levelEditor.setTool(new GateTool());
@@ -122,6 +127,14 @@ public class EditorInputAdapter extends InputAdapter {
             case Input.Keys.L:
                 levelEditor.executeCommand(new LoadLevelCommand(levelEditor));
                 return true;
+            case Input.Keys.DEL:
+            case Input.Keys.FORWARD_DEL:
+                if (levelEditor.getSelectedSplinePathId() != null && levelEditor.getSelectedSplinePointId() != null) {
+                    levelEditor.executeCommand(new DeleteSplinePointCommand(levelEditor,
+                        levelEditor.getSelectedSplinePathId(), levelEditor.getSelectedSplinePointId()));
+                    return true;
+                }
+                return false;
             default:
                 return false;
         }
