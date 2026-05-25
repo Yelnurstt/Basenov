@@ -1,52 +1,158 @@
 {
 id: test-level
 name: Test Level
-width: 40
-height: 30
 tileSize: 32
-blocks: []
-terrainPaths: [
+activeBlockId: test-level
+worldBlocks: [
 	{
-		id: main-terrain
-		points: {
-			class: java.util.Collections$UnmodifiableRandomAccessList
-			items: [
-				{
-					id: terrain-point-1
-					x: 80
-					y: 48
-				}
-				{
-					id: terrain-point-2
-					x: 208
-					y: 48
-				}
-				{
-					id: terrain-point-3
-					x: 400
-					y: 144
-				}
-				{
-					id: terrain-point-4
-					x: 592
-					y: 272
-				}
-				{
-					id: terrain-point-5
-					x: 816
-					y: 336
-				}
-				{
-					id: terrain-point-6
-					x: 1040
-					y: 336
-				}
-			]
+		id: test-level
+		name: Test Level
+		width: 40
+		height: 30
+		tiles: [
+			{
+				x: 36
+				y: 5
+				type: SOLID
+			}
+			{
+				x: 37
+				y: 5
+				type: SOLID
+			}
+			{
+				x: 36
+				y: 6
+				type: SOLID
+			}
+			{
+				x: 38
+				y: 6
+				type: SOLID
+			}
+			{
+				x: 39
+				y: 6
+				type: SOLID
+			}
+			{
+				x: 36
+				y: 7
+				type: SOLID
+			}
+			{
+				x: 39
+				y: 7
+				type: SOLID
+			}
+			{
+				x: 37
+				y: 8
+				type: SOLID
+			}
+			{
+				x: 37
+				y: 9
+				type: SOLID
+			}
+			{
+				x: 32
+				y: 10
+				type: SOLID
+			}
+			{
+				x: 33
+				y: 10
+				type: SOLID
+			}
+			{
+				x: 34
+				y: 10
+				type: SOLID
+			}
+			{
+				x: 35
+				y: 10
+				type: SOLID
+			}
+			{
+				x: 36
+				y: 10
+				type: SOLID
+			}
+			{
+				x: 37
+				y: 10
+				type: SOLID
+			}
+			{
+				x: 9
+				y: 11
+				type: SOLID
+			}
+		]
+		terrain: [
+			{
+				id: main-terrain
+				points: [
+					{
+						id: terrain-point-1
+						x: 80
+						y: 48
+					}
+					{
+						id: terrain-point-2
+						x: 208
+						y: 48
+					}
+					{
+						id: terrain-point-3
+						x: 400
+						y: 144
+					}
+					{
+						id: terrain-point-4
+						x: 592
+						y: 272
+					}
+					{
+						id: terrain-point-5
+						x: 816
+						y: 336
+					}
+					{
+						id: terrain-point-6
+						x: 1040
+						y: 336
+					}
+				]
+				curveType: LINEAR
+				material: editor-dirt
+				debugWidth: 4
+				friction: 1
+			}
+		]
+		objects: []
+		enemies: []
+		rewards: []
+		triggers: []
+		gates: []
+		spawnPoints: [
+			{
+				id: START
+				blockId: test-level
+				x: 64
+				y: 176
+				facingDirection: RIGHT
+				debugLabel: START
+			}
+		]
+		metadata: {
+			class: java.util.LinkedHashMap
 		}
-		curveType: LINEAR
-		material: editor-dirt
-		debugWidth: 4
-		friction: 1
 	}
 ]
+metadata: {
+	class: java.util.LinkedHashMap
+}
 }
