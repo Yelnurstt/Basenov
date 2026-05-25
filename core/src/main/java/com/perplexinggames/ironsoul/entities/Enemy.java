@@ -5,13 +5,16 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.perplexinggames.ironsoul.entities.components.AttackComponent;
+import com.perplexinggames.ironsoul.entities.components.MovementComponent;
 
 public class Enemy extends GameEntity {
 
     private final Rectangle bounds;
     private final Texture texture;
 
-    private final float damage = 10f;
+    private final AttackComponent attackComponent;
+    private final MovementComponent movementComponent;
     private enum EnemyState {
         IDLE,
         ATTACK,
@@ -21,7 +24,8 @@ public class Enemy extends GameEntity {
     private EnemyState state = EnemyState.IDLE;
     public Enemy(float x, float y, float width, float height) {
         super(x, y, 50f);
-
+        attackComponent = new AttackComponent(10f);
+        movementComponent = new MovementComponent(60f);
         bounds = new Rectangle(x, y, width, height);
 
         Pixmap pixmap = new Pixmap((int) width, (int) height, Pixmap.Format.RGBA8888);
@@ -34,8 +38,8 @@ public class Enemy extends GameEntity {
 
     @Override
     public void update(float delta) {
-        bounds.setPosition(x, y);
-
+        x += movementComponent.getSpeed() * delta;
+        bounds.setPosition(x, y);иа
         if (isDead()) {
             state = EnemyState.DEAD;
         }
@@ -52,7 +56,7 @@ public class Enemy extends GameEntity {
     }
 
     public float getDamage() {
-        return damage;
+        return attackComponent.getDamage();
     }
 
     public void dispose() {
