@@ -7,7 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.perplexinggames.ironsoul.entities.components.AttackComponent;
 import com.perplexinggames.ironsoul.entities.components.MovementComponent;
-
+import com.perplexinggames.ironsoul.entities.components.AIComponent;
 public class Enemy extends GameEntity {
 
     private final Rectangle bounds;
@@ -17,16 +17,13 @@ public class Enemy extends GameEntity {
     private int direction = 1;
     private final AttackComponent attackComponent;
     private final MovementComponent movementComponent;
-    private enum EnemyState {
-        IDLE,
-        ATTACK,
-        DEAD
-    }
+    private final AIComponent aiComponent;
 
-    private EnemyState state = EnemyState.IDLE;
+
     public Enemy(float x, float y, float width, float height) {
         super(x, y, 50f);
         this.startX = x;
+        aiComponent = new AIComponent();
         attackComponent = new AttackComponent(10f);
         movementComponent = new MovementComponent(60f);
         bounds = new Rectangle(x, y, width, height);
@@ -42,7 +39,7 @@ public class Enemy extends GameEntity {
     @Override
     public void update(float delta) {
         if (isDead()) {
-            state = EnemyState.DEAD;
+            aiComponent.setState(AIComponent.AIState.DEAD);
             return;
         }
 
@@ -77,11 +74,11 @@ public class Enemy extends GameEntity {
         texture.dispose();
     }
     public boolean canAttack() {
-        return state != EnemyState.DEAD;
+        return aiComponent.canAttack();
     }
     public void setStateToAttack() {
         if (!isDead()) {
-            state = EnemyState.ATTACK;
+            aiComponent.setState(AIComponent.AIState.ATTACK);
         }
     }
 }
