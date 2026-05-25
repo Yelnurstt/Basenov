@@ -95,15 +95,35 @@ public class PhysicsTank {
         // 4. Считаем идеальный угол башни к мышке
         float targetAngle = MathUtils.atan2(localAim.y - pivotY, localAim.x - pivotX) * MathUtils.radiansToDegrees;
 
-        // 5. ОГРАНИЧЕНИЕ УГЛОВ (не стрелять в свой корпус)
+        // 5. ИСПРАВЛЕННОЕ ОГРАНИЧЕНИЕ УГЛОВ (0 градусов вниз, 80 градусов вверх)
         if (facingRight) {
-            // Разрешаем от -10 (чуть вниз) до 190 (чуть назад)
-            if (targetAngle < -10 && targetAngle > -90) targetAngle = -10;
-            if (targetAngle > 190 || targetAngle <= -90) targetAngle = 190;
+            // Нормализуем угол к диапазону [-180, 180]
+            while (targetAngle <= -180) targetAngle += 360;
+            while (targetAngle > 180) targetAngle -= 360;
+
+            // Ограничиваем угол от 0 (строго горизонтально вперед) до 80 градусов вверх
+            if (targetAngle > 80 && targetAngle < 220) {
+                targetAngle = 80;
+            } else if (targetAngle < 0 || targetAngle >= 220) {
+                targetAngle = 0;
+            }
         } else {
-            // Для левой стороны лимиты инвертированы: от 190 (вниз-влево) до -10 (вниз-вправо)
-            if (targetAngle > -170 && targetAngle < -90) targetAngle = -170;
-            if (targetAngle < 10 && targetAngle >= -90) targetAngle = 10;
+            // Для левой стороны инвертируем угол, чтобы 0 градусов соответствовал направлению "вперед-влево"
+            targetAngle = 180f - targetAngle;
+
+            // Нормализуем угол к диапазону [-180, 180]
+            while (targetAngle <= -180) targetAngle += 360;
+            while (targetAngle > 180) targetAngle -= 360;
+
+            // Ограничиваем угол от 0 (горизонт слева) до 80 градусов вверх
+            if (targetAngle > 80 && targetAngle < 220) {
+                targetAngle = 80;
+            } else if (targetAngle < 0 || targetAngle >= 220) {
+                targetAngle = 0;
+            }
+
+            // Переводим обратно в локальную систему координат отраженного спрайта пушки
+            targetAngle = -targetAngle;
         }
 
         // 6. Плавно доводим текущий угол до нужного (инерция башни)
@@ -190,6 +210,7 @@ public class PhysicsTank {
         float hullHeight = hullTex.getHeight() * drawScale;
         return tracksHeight + hullHeight;
     }
+
     public void takeDamage(float amount) {
         health -= amount;
 
@@ -197,9 +218,11 @@ public class PhysicsTank {
             health = 0f;
         }
     }
+
     public boolean isDead() {
         return health <= 0f;
     }
+
     public float getHealth() {
         return health;
     }
