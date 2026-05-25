@@ -18,7 +18,8 @@ public class PhysicsTank {
 
     private final Texture hullTex, tracksTex, turretTex;
     private final TextureRegion hullReg, tracksReg, turretReg;
-
+    private float health = 100f;
+    private float maxHealth = 100f;
     private float width = 80f;
     private boolean facingRight = true;
 
@@ -188,5 +189,22 @@ public class PhysicsTank {
         float tracksHeight = tracksTex.getHeight() * drawScale;
         float hullHeight = hullTex.getHeight() * drawScale;
         return tracksHeight + hullHeight;
+    }
+    public void takeDamage(float amount) {
+        health -= amount;
+
+        if (health < 0f) {
+            health = 0f;
+        }
+    }
+    public boolean isDead() {
+        return health <= 0f;
+    }
+    public float getHealth() {
+        return health;
+    }
+
+    public float getMaxHealth() {
+        return maxHealth;
     }
 }

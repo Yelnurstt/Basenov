@@ -220,14 +220,17 @@ public class LevelEditorDemoScreen implements Screen {
             damageCooldown = 1f;
 
             System.out.println("Tank damaged by enemy!");
-
+            tank.takeDamage(enemy.getDamage());
             enemy.takeDamage(10f);
 
             System.out.println("Enemy HP: " + enemy.getHealth());
-
+            if (tank.isDead()) {
+                System.out.println("TANK DEAD");
+            }
             if (enemy.isDead()) {
                 System.out.println("ENEMY DEAD");
             }
+            System.out.println("Tank HP: " + tank.getHealth() + "/" + tank.getMaxHealth());
         }
     }
 
