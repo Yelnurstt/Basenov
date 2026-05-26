@@ -3,7 +3,7 @@ package com.perplexinggames.ironsoul.entities.components;
 public class HealthComponent {
 
     private float health;
-    private final float maxHealth;
+    private float maxHealth;
 
     public HealthComponent(float maxHealth) {
         this.maxHealth = maxHealth;
@@ -36,5 +36,12 @@ public class HealthComponent {
 
     public float getMaxHealth() {
         return maxHealth;
+    }
+    public void setHealth(float health) {
+        this.health = health;
+    }
+
+    public void setMaxHealth(float maxHealth) {
+        this.maxHealth = maxHealth;
     }
 }

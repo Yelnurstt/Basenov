@@ -11,29 +11,34 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.perplexinggames.ironsoul.core.Main;
 import com.perplexinggames.ironsoul.editor.EditorInputAdapter;
 import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
 import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
+import com.perplexinggames.ironsoul.editor.render.EditorGridRenderer;
+import com.perplexinggames.ironsoul.entities.EnemyFactory;
+import com.perplexinggames.ironsoul.entities.EnemySpawnData;
+import com.perplexinggames.ironsoul.entities.EnemySpawner;
 import com.perplexinggames.ironsoul.entities.PhysicsTank;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.LevelRenderer;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
-import com.perplexinggames.ironsoul.editor.render.EditorGridRenderer;
 import com.perplexinggames.ironsoul.world.GateData;
 import com.perplexinggames.ironsoul.world.WorldBlockData;
 import com.perplexinggames.ironsoul.world.WorldData;
+import com.perplexinggames.ironsoul.world.WorldElementData;
 import com.perplexinggames.ironsoul.world.runtime.PhysicsTankRuntimeAdapter;
 import com.perplexinggames.ironsoul.world.runtime.WorldSpawnResolver;
 import com.perplexinggames.ironsoul.world.runtime.WorldStreamingService;
 import com.perplexinggames.ironsoul.world.runtime.WorldTransitionService;
 import com.perplexinggames.ironsoul.world.serialization.JsonWorldSerializer;
 import com.perplexinggames.ironsoul.world.serialization.WorldSerializer;
-import com.perplexinggames.ironsoul.entities.EnemyFactory;
+
 public class LevelEditorDemoScreen implements Screen {
     private final Main game;
 
@@ -47,7 +52,7 @@ public class LevelEditorDemoScreen implements Screen {
     private LevelEditor levelEditor;
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
-    private Enemy enemy;
+    private Array<Enemy> enemies;
     private float damageCooldown = 0f;
     private EditorSideMenu editorSideMenu;
     private InputMultiplexer inputMultiplexer;
@@ -86,11 +91,8 @@ public class LevelEditorDemoScreen implements Screen {
         transitionService = new WorldTransitionService(levelEditor.getWorldData(), streamingService,
             new PhysicsTankRuntimeAdapter(tank), blockId -> levelEditor.selectActiveBlock(blockId));
         spawnTankAtActiveBlock();
-        enemy = EnemyFactory.createEnemy(
-            EnemyFactory.EnemyType.BASIC,
-            700,
-            300
-        );
+        enemies = new Array<>();
+        spawnEnemiesFromActiveBlock();
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera, editorSideMenu.getStage());
@@ -139,7 +141,9 @@ public class LevelEditorDemoScreen implements Screen {
         batch.setProjectionMatrix(worldCamera.combined);
         batch.begin();
         tank.render(batch);
-        enemy.render(batch);
+        for (Enemy enemy : enemies) {
+            enemy.render(batch);
+        }
         batch.end();
 
         levelRenderer.renderGameplayForeground(runtimeLevel, worldCamera);
@@ -187,7 +191,9 @@ public class LevelEditorDemoScreen implements Screen {
         }
         batch.dispose();
         font.dispose();
-        enemy.dispose();
+        for (Enemy enemy : enemies) {
+            enemy.dispose();
+        }
         levelRenderer.dispose();
         gridRenderer.dispose();
         tank.dispose();
@@ -212,9 +218,14 @@ public class LevelEditorDemoScreen implements Screen {
 
     private void updateGameplay(float delta) {
         synchronizeGameplayBlockSelection();
+        if (enemies == null || enemies.size == 0) {
+            spawnEnemiesFromActiveBlock();
+        }
         tank.update(delta);
         transitionService.update(levelEditor.getActiveBlock(), Gdx.input.isKeyJustPressed(Input.Keys.E));
-        enemy.update(delta);
+        for (Enemy enemy : enemies) {
+            enemy.update(delta);
+        }
 
         if (damageCooldown > 0f) {
             damageCooldown -= delta;
@@ -222,25 +233,30 @@ public class LevelEditorDemoScreen implements Screen {
         centerCameraOnTank();
         clampCameraToLevelBounds();
         worldCamera.update();
-        if (!enemy.isDead()
-            && enemy.canAttack()
-            && tank.getBounds().overlaps(enemy.getBounds())
-            && damageCooldown <= 0f) {
-            enemy.setStateToAttack();
-            damageCooldown = 1f;
+        for (Enemy enemy : enemies) {
+            if (!enemy.isDead()
+                && enemy.canAttack()
+                && tank.getBounds().overlaps(enemy.getBounds())
+                && damageCooldown <= 0f) {
 
-            System.out.println("Tank damaged by enemy!");
-            tank.takeDamage(enemy.getDamage());
-            enemy.takeDamage(10f);
+                enemy.setStateToAttack();
+                damageCooldown = 1f;
 
-            System.out.println("Enemy HP: " + enemy.getHealth());
-            if (tank.isDead()) {
-                System.out.println("TANK DEAD");
+                tank.takeDamage(enemy.getDamage());
+                enemy.takeDamage(10f);
+
+                System.out.println("Enemy HP: " + enemy.getHealth());
+
+                if (tank.isDead()) {
+                    System.out.println("TANK DEAD");
+                }
+
+                if (enemy.isDead()) {
+                    System.out.println("ENEMY DEAD");
+                }
+
+                System.out.println("Tank HP: " + tank.getHealth() + "/" + tank.getMaxHealth());
             }
-            if (enemy.isDead()) {
-                System.out.println("ENEMY DEAD");
-            }
-            System.out.println("Tank HP: " + tank.getHealth() + "/" + tank.getMaxHealth());
         }
     }
 
@@ -290,18 +306,111 @@ public class LevelEditorDemoScreen implements Screen {
             worldCamera.position.y = Math.max(halfHeight, Math.min(worldCamera.position.y, worldHeight - halfHeight));
         }
     }
+    private void spawnEnemiesFromActiveBlock() {
+        WorldBlockData activeBlock = levelEditor.getActiveBlock();
+
+        Array<EnemySpawnData> spawnData = new Array<>();
+
+        if (activeBlock != null) {
+            for (WorldElementData enemyMarker : activeBlock.enemies) {
+                spawnData.add(
+                    new EnemySpawnData(
+                        EnemyFactory.EnemyType.valueOf(
+                            enemyMarker.metadata.getOrDefault(
+                                "enemyType",
+                                "BASIC"
+                            )
+                        ),
+                        enemyMarker.x,
+                        enemyMarker.y
+                    )
+                );
+            }
+        }
+
+        EnemySpawner enemySpawner = new EnemySpawner();
+        enemies = enemySpawner.spawnEnemies(spawnData);
+    }
 
     private void renderOverlay() {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
+
+        // Tank HP
+        float healthPercent = tank.getHealth() / tank.getMaxHealth();
+        if (healthPercent < 0f) healthPercent = 0f;
+        if (healthPercent > 1f) healthPercent = 1f;
+        float barX = tank.physics.x - 60f;
+        float barY = tank.physics.y + 90f;
+
+        font.setColor(Color.DARK_GRAY);
+        font.draw(batch, "□□□□□□□□□□", barX, barY);
+
+        font.setColor(Color.GREEN);
+
+        int hpBars = (int) (10 * healthPercent);
+        StringBuilder hpText = new StringBuilder();
+
+        for (int i = 0; i < hpBars; i++) {
+            hpText.append("█");
+        }
+
+        font.draw(batch, hpText.toString(), barX, barY);
+
+        font.setColor(Color.WHITE);
+        font.draw(
+            batch,
+            (int) (healthPercent * 100) + "%",
+            barX + 35f,
+            barY + 20f
+        );
+
+        for (Enemy enemy : enemies) {
+            if (!enemy.isDead()) {
+                float enemyHealthPercent = enemy.getHealth() / enemy.getMaxHealth();
+
+                if (enemyHealthPercent < 0f) enemyHealthPercent = 0f;
+                if (enemyHealthPercent > 1f) enemyHealthPercent = 1f;
+
+                float enemyBarX = enemy.getBounds().x - 20f;
+                float enemyBarY = enemy.getBounds().y + 90f;
+
+                font.setColor(Color.DARK_GRAY);
+                font.draw(batch, "□□□□□□□□□□", enemyBarX, enemyBarY);
+
+                font.setColor(Color.RED);
+
+                int enemyHpBars = (int) (10 * enemyHealthPercent);
+                StringBuilder enemyHpText = new StringBuilder();
+
+                for (int i = 0; i < enemyHpBars; i++) {
+                    enemyHpText.append("█");
+                }
+
+                font.draw(batch, enemyHpText.toString(), enemyBarX, enemyBarY);
+
+                font.setColor(Color.WHITE);
+                font.draw(
+                    batch,
+                    (int) (enemyHealthPercent * 100) + "%",
+                    enemyBarX + 30f,
+                    enemyBarY + 20f
+                );
+            }
+        }
+
         String overlayText = buildOverlayText();
         if (!overlayText.isBlank()) {
+            font.setColor(Color.WHITE);
             font.draw(batch, overlayText, 12f, hudCamera.viewportHeight - 12f);
         }
+
         String interactionText = transitionService == null ? null : transitionService.getActiveInteractionText();
         if (interactionText != null && !interactionText.isBlank()) {
+            font.setColor(Color.WHITE);
             font.draw(batch, interactionText, hudCamera.viewportWidth * 0.35f, 48f);
         }
+
         batch.end();
     }
 

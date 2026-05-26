@@ -63,7 +63,7 @@ public class LevelEditor implements EditorToolController {
     private static final int DEFAULT_TILE_SIZE = 32;
     private static final float TERRAIN_POINT_PICK_RADIUS_CELLS = 0.9f;
     private static final float WORLD_ELEMENT_PICK_RADIUS = 24f;
-
+    private String selectedEnemyType = "BASIC";
     public enum MarkerLayer {
         OBJECT,
         ENEMY,
@@ -1182,7 +1182,9 @@ public class LevelEditor implements EditorToolController {
             clampToBlockX(worldX, block),
             clampToBlockY(worldY, block),
             layer.name() + " " + markerSequence
-        );
+        );if (layer == MarkerLayer.ENEMY) {
+            marker.metadata.put("enemyType", selectedEnemyType);
+        }
         getMarkerCollection(block, layer).add(marker);
         validateWorld();
         updateStatus("Placed " + marker.type + " " + marker.id);
@@ -1616,5 +1618,12 @@ public class LevelEditor implements EditorToolController {
             case REWARD -> block.rewards;
             case TRIGGER -> block.triggers;
         };
+    }
+    public void setSelectedEnemyType(String enemyType) {
+        this.selectedEnemyType = enemyType;
+    }
+
+    public String getSelectedEnemyType() {
+        return selectedEnemyType;
     }
 }
