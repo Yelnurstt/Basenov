@@ -1,5 +1,5 @@
 package com.perplexinggames.ironsoul.screens;
-import com.perplexinggames.ironsoul.entities.Enemy;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Array;
@@ -17,8 +18,9 @@ import com.perplexinggames.ironsoul.core.Main;
 import com.perplexinggames.ironsoul.editor.EditorInputAdapter;
 import com.perplexinggames.ironsoul.editor.EditorMode;
 import com.perplexinggames.ironsoul.editor.LevelEditor;
-import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
 import com.perplexinggames.ironsoul.editor.render.EditorGridRenderer;
+import com.perplexinggames.ironsoul.editor.ui.EditorSideMenu;
+import com.perplexinggames.ironsoul.entities.Enemy;
 import com.perplexinggames.ironsoul.entities.EnemyFactory;
 import com.perplexinggames.ironsoul.entities.EnemySpawnData;
 import com.perplexinggames.ironsoul.entities.EnemySpawner;
@@ -26,6 +28,8 @@ import com.perplexinggames.ironsoul.entities.PhysicsTank;
 import com.perplexinggames.ironsoul.level.LevelData;
 import com.perplexinggames.ironsoul.level.LevelRenderer;
 import com.perplexinggames.ironsoul.level.RuntimeLevel;
+import com.perplexinggames.ironsoul.projectile.Projectile;
+import com.perplexinggames.ironsoul.projectile.ProjectileSystem;
 import com.perplexinggames.ironsoul.terrain.RuntimeTerrainCollisionProvider;
 import com.perplexinggames.ironsoul.terrain.TerrainPath;
 import com.perplexinggames.ironsoul.world.GateData;
@@ -40,6 +44,7 @@ import com.perplexinggames.ironsoul.world.serialization.JsonWorldSerializer;
 import com.perplexinggames.ironsoul.world.serialization.WorldSerializer;
 
 public class LevelEditorDemoScreen implements Screen {
+
     private final Main game;
 
     private SpriteBatch batch;
@@ -53,6 +58,7 @@ public class LevelEditorDemoScreen implements Screen {
     private EditorInputAdapter editorInputAdapter;
     private PhysicsTank tank;
     private Array<Enemy> enemies;
+    private ProjectileSystem projectileSystem;
     private float damageCooldown = 0f;
     private EditorSideMenu editorSideMenu;
     private InputMultiplexer inputMultiplexer;
@@ -86,13 +92,17 @@ public class LevelEditorDemoScreen implements Screen {
 
         tank = new PhysicsTank(runtimeLevel.getTileSize() * 2f, getInitialTankSpawnY(runtimeLevel.getTileSize()),
             new RuntimeTerrainCollisionProvider(runtimeLevel));
+        enemies = new Array<>();
+        projectileSystem = new ProjectileSystem();
+
         streamingService = new WorldStreamingService(levelEditor.getWorldData());
         streamingService.setCurrentBlock(levelEditor.getActiveBlockId());
         transitionService = new WorldTransitionService(levelEditor.getWorldData(), streamingService,
             new PhysicsTankRuntimeAdapter(tank), blockId -> levelEditor.selectActiveBlock(blockId));
+
         spawnTankAtActiveBlock();
-        enemies = new Array<>();
         spawnEnemiesFromActiveBlock();
+
         Skin skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         editorSideMenu = new EditorSideMenu(levelEditor, skin);
         editorInputAdapter = new EditorInputAdapter(levelEditor, worldCamera, editorSideMenu.getStage());
@@ -144,12 +154,13 @@ public class LevelEditorDemoScreen implements Screen {
         for (Enemy enemy : enemies) {
             enemy.render(batch);
         }
+        if (levelEditor.getMode() == EditorMode.GAMEPLAY) {
+            projectileSystem.render(batch);
+        }
         batch.end();
 
         levelRenderer.renderGameplayForeground(runtimeLevel, worldCamera);
-
         renderOverlay();
-
         editorSideMenu.act(delta);
         editorSideMenu.draw();
     }
@@ -194,6 +205,7 @@ public class LevelEditorDemoScreen implements Screen {
         for (Enemy enemy : enemies) {
             enemy.dispose();
         }
+        projectileSystem.dispose();
         levelRenderer.dispose();
         gridRenderer.dispose();
         tank.dispose();
@@ -221,6 +233,11 @@ public class LevelEditorDemoScreen implements Screen {
         if (enemies == null || enemies.size == 0) {
             spawnEnemiesFromActiveBlock();
         }
+
+        handleGameplayShooting();
+        projectileSystem.update(delta);
+        resolveProjectileHits();
+
         tank.update(delta);
         transitionService.update(levelEditor.getActiveBlock(), Gdx.input.isKeyJustPressed(Input.Keys.E));
         for (Enemy enemy : enemies) {
@@ -233,6 +250,49 @@ public class LevelEditorDemoScreen implements Screen {
         centerCameraOnTank();
         clampCameraToLevelBounds();
         worldCamera.update();
+        resolveEnemyContactDamage();
+    }
+
+    private void handleGameplayShooting() {
+        if (!Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            return;
+        }
+
+        Vector2 barrelEnd = tank.getBarrelEnd();
+        Vector2 shootDirection = tank.getShootDirection();
+        float shootSpeed = 700f;
+
+        projectileSystem.spawnPhysicsShot(barrelEnd.x, barrelEnd.y, shootDirection.x, shootDirection.y, shootSpeed);
+
+        float angle = MathUtils.atan2(shootDirection.y, shootDirection.x) * MathUtils.radiansToDegrees;
+        projectileSystem.spawnMuzzleFlash(barrelEnd.x, barrelEnd.y, angle);
+
+        tank.physics.velocity.x -= shootDirection.x * (shootSpeed * 0.4f);
+    }
+
+    private void resolveProjectileHits() {
+        for (Projectile projectile : projectileSystem.getProjectiles()) {
+            if (projectile.getY() < tank.physics.y) {
+                projectile.destroy();
+                projectileSystem.spawnExplosion(projectile.getX(), projectile.getY());
+                continue;
+            }
+
+            for (Enemy enemy : enemies) {
+                if (enemy.isDead() || !projectile.getBounds().overlaps(enemy.getBounds())) {
+                    continue;
+                }
+
+                projectile.destroy();
+                projectileSystem.spawnExplosion(projectile.getX(), projectile.getY());
+                enemy.takeDamage(25f);
+                System.out.println("Enemy hit. HP: " + enemy.getHealth());
+                break;
+            }
+        }
+    }
+
+    private void resolveEnemyContactDamage() {
         for (Enemy enemy : enemies) {
             if (!enemy.isDead()
                 && enemy.canAttack()
@@ -250,7 +310,6 @@ public class LevelEditorDemoScreen implements Screen {
                 if (tank.isDead()) {
                     System.out.println("TANK DEAD");
                 }
-
                 if (enemy.isDead()) {
                     System.out.println("ENEMY DEAD");
                 }
@@ -267,6 +326,7 @@ public class LevelEditorDemoScreen implements Screen {
         if (!levelEditor.getActiveBlockId().equals(streamingService.getCurrentBlock())) {
             streamingService.setCurrentBlock(levelEditor.getActiveBlockId());
             spawnTankAtActiveBlock();
+            spawnEnemiesFromActiveBlock();
         }
     }
 
@@ -306,26 +366,27 @@ public class LevelEditorDemoScreen implements Screen {
             worldCamera.position.y = Math.max(halfHeight, Math.min(worldCamera.position.y, worldHeight - halfHeight));
         }
     }
+
     private void spawnEnemiesFromActiveBlock() {
         WorldBlockData activeBlock = levelEditor.getActiveBlock();
 
         Array<EnemySpawnData> spawnData = new Array<>();
-
         if (activeBlock != null) {
             for (WorldElementData enemyMarker : activeBlock.enemies) {
                 spawnData.add(
                     new EnemySpawnData(
                         EnemyFactory.EnemyType.valueOf(
-                            enemyMarker.metadata.getOrDefault(
-                                "enemyType",
-                                "BASIC"
-                            )
+                            enemyMarker.metadata.getOrDefault("enemyType", "BASIC")
                         ),
                         enemyMarker.x,
                         enemyMarker.y
                     )
                 );
             }
+        }
+
+        for (Enemy enemy : enemies) {
+            enemy.dispose();
         }
 
         EnemySpawner enemySpawner = new EnemySpawner();
@@ -336,66 +397,56 @@ public class LevelEditorDemoScreen implements Screen {
         batch.setProjectionMatrix(hudCamera.combined);
         batch.begin();
 
-        // Tank HP
         float healthPercent = tank.getHealth() / tank.getMaxHealth();
-        if (healthPercent < 0f) healthPercent = 0f;
-        if (healthPercent > 1f) healthPercent = 1f;
+        if (healthPercent < 0f) {
+            healthPercent = 0f;
+        }
+        if (healthPercent > 1f) {
+            healthPercent = 1f;
+        }
         float barX = tank.physics.x - 60f;
         float barY = tank.physics.y + 90f;
 
         font.setColor(Color.DARK_GRAY);
-        font.draw(batch, "□□□□□□□□□□", barX, barY);
+        font.draw(batch, "в–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ў", barX, barY);
 
         font.setColor(Color.GREEN);
-
         int hpBars = (int) (10 * healthPercent);
         StringBuilder hpText = new StringBuilder();
-
         for (int i = 0; i < hpBars; i++) {
-            hpText.append("█");
+            hpText.append("в–€");
         }
-
         font.draw(batch, hpText.toString(), barX, barY);
 
         font.setColor(Color.WHITE);
-        font.draw(
-            batch,
-            (int) (healthPercent * 100) + "%",
-            barX + 35f,
-            barY + 20f
-        );
+        font.draw(batch, (int) (healthPercent * 100) + "%", barX + 35f, barY + 20f);
 
         for (Enemy enemy : enemies) {
             if (!enemy.isDead()) {
                 float enemyHealthPercent = enemy.getHealth() / enemy.getMaxHealth();
-
-                if (enemyHealthPercent < 0f) enemyHealthPercent = 0f;
-                if (enemyHealthPercent > 1f) enemyHealthPercent = 1f;
+                if (enemyHealthPercent < 0f) {
+                    enemyHealthPercent = 0f;
+                }
+                if (enemyHealthPercent > 1f) {
+                    enemyHealthPercent = 1f;
+                }
 
                 float enemyBarX = enemy.getBounds().x - 20f;
                 float enemyBarY = enemy.getBounds().y + 90f;
 
                 font.setColor(Color.DARK_GRAY);
-                font.draw(batch, "□□□□□□□□□□", enemyBarX, enemyBarY);
+                font.draw(batch, "в–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ўв–Ў", enemyBarX, enemyBarY);
 
                 font.setColor(Color.RED);
-
                 int enemyHpBars = (int) (10 * enemyHealthPercent);
                 StringBuilder enemyHpText = new StringBuilder();
-
                 for (int i = 0; i < enemyHpBars; i++) {
-                    enemyHpText.append("█");
+                    enemyHpText.append("в–€");
                 }
-
                 font.draw(batch, enemyHpText.toString(), enemyBarX, enemyBarY);
 
                 font.setColor(Color.WHITE);
-                font.draw(
-                    batch,
-                    (int) (enemyHealthPercent * 100) + "%",
-                    enemyBarX + 30f,
-                    enemyBarY + 20f
-                );
+                font.draw(batch, (int) (enemyHealthPercent * 100) + "%", enemyBarX + 30f, enemyBarY + 20f);
             }
         }
 
